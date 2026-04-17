@@ -152,9 +152,14 @@ export function AdminPage() {
   const [catSaving, setCatSaving]     = useState(false)
   const [showCatForm, setShowCatForm] = useState(false)
   /* subcategory form state */
-  const [subcatForm, setSubcatForm]     = useState({ id: '', parent_category: 'food', label_th: '', label_en: '', label_zh: '' })
-  const [subcatSaving, setSubcatSaving] = useState(false)
-  const [showSubcatForm, setShowSubcatForm] = useState<string | null>(null) // holds parent_category key
+  const [subcatForm, setSubcatForm]       = useState({ id: '', parent_category: 'food', label_th: '', label_en: '', label_zh: '' })
+  const [subcatSaving, setSubcatSaving]   = useState(false)
+  const [showSubcatForm, setShowSubcatForm] = useState<string | null>(null)
+  /* danger zone state */
+  const [dangerStep, setDangerStep]     = useState<'idle' | 'confirm' | 'verify'>('idle')
+  const [dangerPassword, setDangerPassword] = useState('')
+  const [dangerError, setDangerError]   = useState('')
+  const [dangerBusy, setDangerBusy]     = useState(false)
   const [toast, setToast]           = useState<{ msg: string; ok: boolean } | null>(null)
 
   // Node settings form
@@ -958,19 +963,114 @@ export function AdminPage() {
 
               {/* Danger zone */}
               <div className="bg-red-500/5 rounded-2xl border border-red-500/20 p-5">
-                <h2 className="text-red-400 font-bold text-sm mb-1">Danger Zone</h2>
-                <p className="text-gray-500 text-xs mb-4">การกระทำเหล่านี้ไม่สามารถย้อนกลับได้</p>
-                <button
-                  onClick={async () => {
-                    if (!confirm(`ลบสถานที่ทั้งหมดใน ${nodeId}? (${stats.total} รายการ)`)) return
-                    const { error } = await supabase.from('places').delete().eq('node_id', nodeId)
-                    if (error) showToast('ลบไม่สำเร็จ', false)
-                    else showToast(`ลบ ${stats.total} สถานที่แล้ว`)
-                  }}
-                  className="w-full py-2 rounded-xl text-sm font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors"
-                >
-                  ลบสถานที่ทั้งหมดใน {nodeId} ({stats.total} รายการ)
-                </button>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-red-400 text-base">⚠️</span>
+                  <h2 className="text-red-400 font-bold text-sm">Danger Zone</h2>
+                </div>
+                <p className="text-gray-500 text-xs mb-4">
+                  การกระทำเหล่านี้<span className="text-red-400 font-semibold">ไม่สามารถย้อนกลับได้</span> — ต้องยืนยันรหัสผ่าน admin
+                </p>
+
+                {/* Step 1: idle — show button */}
+                {dangerStep === 'idle' && (
+                  <button
+                    onClick={() => { setDangerStep('confirm'); setDangerError('') }}
+                    className="w-full py-2 rounded-xl text-sm font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors"
+                  >
+                    🗑 ลบสถานที่ทั้งหมดใน {nodeId} ({stats.total} รายการ)
+                  </button>
+                )}
+
+                {/* Step 2: confirm intent */}
+                {dangerStep === 'confirm' && (
+                  <div className="space-y-3">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-300">
+                      คุณกำลังจะ<strong>ลบสถานที่ {stats.total} รายการ</strong>ใน <code className="bg-red-500/20 px-1 rounded">{nodeId}</code> ทั้งหมด
+                      <br /><span className="text-xs text-red-400/70 mt-1 block">ข้อมูลจะหายถาวร ไม่สามารถกู้คืนได้</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setDangerStep('verify')}
+                        className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-500 transition-colors"
+                      >
+                        ดำเนินการต่อ →
+                      </button>
+                      <button
+                        onClick={() => { setDangerStep('idle'); setDangerPassword(''); setDangerError('') }}
+                        className="flex-1 py-2 rounded-xl text-sm font-semibold text-gray-400 bg-white/5 hover:bg-white/10 transition-colors"
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: password verify */}
+                {dangerStep === 'verify' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-red-400 mb-1.5">
+                        🔐 ใส่รหัสผ่าน Admin เพื่อยืนยัน
+                      </label>
+                      <input
+                        type="password"
+                        autoFocus
+                        value={dangerPassword}
+                        onChange={e => { setDangerPassword(e.target.value); setDangerError('') }}
+                        onKeyDown={async e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                        placeholder="รหัสผ่านของคุณ"
+                        className="w-full px-3 py-2 text-sm rounded-lg bg-red-500/10 border border-red-500/30 text-white placeholder-red-400/40 focus:outline-none focus:border-red-400 transition-colors"
+                      />
+                    </div>
+
+                    {dangerError && (
+                      <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                        {dangerError}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        disabled={!dangerPassword || dangerBusy}
+                        onClick={async () => {
+                          if (!user?.email) return
+                          setDangerBusy(true)
+                          setDangerError('')
+                          // ยืนยันรหัสผ่านกับ Supabase
+                          const { error: authErr } = await supabase.auth.signInWithPassword({
+                            email:    user.email,
+                            password: dangerPassword,
+                          })
+                          if (authErr) {
+                            setDangerError('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่')
+                            setDangerBusy(false)
+                            return
+                          }
+                          // ยืนยันผ่าน — ลบข้อมูล
+                          const { error: delErr } = await supabase
+                            .from('places').delete().eq('node_id', nodeId)
+                          setDangerBusy(false)
+                          if (delErr) {
+                            showToast('ลบไม่สำเร็จ: ' + delErr.message, false)
+                          } else {
+                            showToast(`✓ ลบ ${stats.total} สถานที่แล้ว`)
+                            setDangerStep('idle')
+                            setDangerPassword('')
+                          }
+                        }}
+                        className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-500 disabled:opacity-40 transition-colors"
+                      >
+                        {dangerBusy ? '⏳ กำลังตรวจสอบ...' : '🗑 ยืนยันลบทั้งหมด'}
+                      </button>
+                      <button
+                        onClick={() => { setDangerStep('idle'); setDangerPassword(''); setDangerError('') }}
+                        className="flex-1 py-2 rounded-xl text-sm font-semibold text-gray-400 bg-white/5 hover:bg-white/10 transition-colors"
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
