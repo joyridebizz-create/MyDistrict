@@ -1,7 +1,7 @@
 import type { Place, Node } from '../types/place'
 
 export const PIMAI_NODE: Node = {
-  id: 'pimai',
+  id: 'phimai',
   name: 'อำเภอพิมาย',
   province: 'นครราชสีมา',
   center_lat: 15.2200,
@@ -38,7 +38,7 @@ export const MOCK_NODES: Node[] = [
 export const PIMAI_PLACES: Place[] = [
   {
     id: 'mock-1',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'ปราสาทหินพิมาย',
     name_en: 'Phimai Historical Park',
     name_zh: '披迈历史公园',
@@ -59,7 +59,7 @@ export const PIMAI_PLACES: Place[] = [
   },
   {
     id: 'mock-2',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'พิพิธภัณฑสถานแห่งชาติพิมาย',
     name_en: 'Phimai National Museum',
     name_zh: '披迈国家博物馆',
@@ -80,7 +80,7 @@ export const PIMAI_PLACES: Place[] = [
   },
   {
     id: 'mock-3',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'Pimai Palace Hotel',
     name_en: 'Pimai Palace Hotel',
     name_zh: '披迈宫殿酒店',
@@ -101,7 +101,7 @@ export const PIMAI_PLACES: Place[] = [
   },
   {
     id: 'mock-4',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'ร้านข้าวหมูแดง พิมาย',
     name_en: 'Pimai Red Pork Rice',
     name_zh: '披迈叉烧饭',
@@ -122,7 +122,7 @@ export const PIMAI_PLACES: Place[] = [
   },
   {
     id: 'mock-5',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'Pimai Slow Coffee',
     name_en: 'Pimai Slow Coffee',
     name_zh: '披迈慢咖啡',
@@ -143,7 +143,7 @@ export const PIMAI_PLACES: Place[] = [
   },
   {
     id: 'mock-6',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'พิมายคาร์เร้นท์',
     name_en: 'Pimai Car Rental',
     name_zh: '披迈租车',
@@ -164,7 +164,7 @@ export const PIMAI_PLACES: Place[] = [
   },
   {
     id: 'mock-7',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'สวนสาธารณะท่าสงกรานต์',
     name_en: 'Songkran Public Park',
     name_zh: '宋干节公园',
@@ -185,7 +185,7 @@ export const PIMAI_PLACES: Place[] = [
   },
   {
     id: 'mock-8',
-    node_id: 'pimai',
+    node_id: 'phimai',
     name: 'บ้านสวนพิมาย',
     name_en: 'Baan Suan Pimai',
     name_zh: '披迈花园民宿',

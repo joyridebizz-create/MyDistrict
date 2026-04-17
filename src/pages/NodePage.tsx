@@ -11,7 +11,7 @@ import type { Category, Lang, Place } from '../types/place'
 import { CAT_CONFIG, CATEGORIES, I18N } from '../types/place'
 
 export function NodePage() {
-  const { nodeId = 'pimai' } = useParams<{ nodeId: string }>()
+  const { nodeId = 'phimai' } = useParams<{ nodeId: string }>()
 
   const [lang, setLang]         = useState<Lang>('th')
   const [category, setCategory] = useState<Category | 'all'>('all')

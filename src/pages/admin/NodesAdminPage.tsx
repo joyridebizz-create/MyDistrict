@@ -281,7 +281,7 @@ export function NodesAdminPage() {
                 <span className="text-blue-400 font-mono mt-0.5">URL</span>
                 <span>
                   <code className="bg-white/8 px-1 rounded">/:nodeId</code> →{' '}
-                  <code className="bg-white/8 px-1 rounded">/pimai</code>{' '}
+                  <code className="bg-white/8 px-1 rounded">/phimai</code>{' '}
                   <code className="bg-white/8 px-1 rounded">/korat</code>{' '}
                   <code className="bg-white/8 px-1 rounded">/ayutthaya</code>
                 </span>

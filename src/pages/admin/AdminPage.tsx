@@ -127,7 +127,7 @@ function PlaceRow({
    Main AdminPage
 ───────────────────────────────────────────── */
 export function AdminPage() {
-  const { nodeId = 'pimai' } = useParams<{ nodeId: string }>()
+  const { nodeId = 'phimai' } = useParams<{ nodeId: string }>()
   const { user } = useAuth()
 
   const { node }            = useNode(nodeId)
