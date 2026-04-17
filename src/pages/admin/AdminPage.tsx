@@ -1,15 +1,17 @@
 import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { supabase }       from '../../lib/supabase'
-import { useAuth }        from '../../hooks/useAuth'
-import { usePlaces }      from '../../hooks/usePlaces'
-import { useNode }        from '../../hooks/useNode'
-import { PIMAI_NODE }     from '../../data/pimai-mock'
-import { AdminMapPicker } from '../../components/admin/AdminMapPicker'
-import { PlaceForm }      from '../../components/admin/PlaceForm'
+import { supabase }         from '../../lib/supabase'
+import { useAuth }          from '../../hooks/useAuth'
+import { usePlaces }        from '../../hooks/usePlaces'
+import { useNode }          from '../../hooks/useNode'
+import { useCategories }    from '../../hooks/useCategories'
+import { PIMAI_NODE }       from '../../data/pimai-mock'
+import { AdminMapPicker }   from '../../components/admin/AdminMapPicker'
+import { PlaceForm }        from '../../components/admin/PlaceForm'
 import type { PlaceFormData } from '../../components/admin/PlaceForm'
-import type { Place, Category } from '../../types/place'
-import { CAT_CONFIG, CATEGORIES } from '../../types/place'
+import type { Place } from '../../types/place'
+import { CAT_CONFIG, CATEGORIES, getCatConfig, ICON_OPTIONS, COLOR_OPTIONS } from '../../types/place'
+import type { CustomCategory } from '../../types/place'
 
 type Tab = 'dashboard' | 'places' | 'map' | 'settings'
 
@@ -34,14 +36,15 @@ function StatCard({ label, value, sub, color }: {
    Place row in table
 ───────────────────────────────────────────── */
 function PlaceRow({
-  place, onEdit, onToggleActive, onToggleFeatured,
+  place, onEdit, onToggleActive, onToggleFeatured, customCategories,
 }: {
   place: Place
   onEdit: (p: Place) => void
   onToggleActive: (p: Place) => void
   onToggleFeatured: (p: Place) => void
+  customCategories: CustomCategory[]
 }) {
-  const cat = CAT_CONFIG[place.category as Category]
+  const cat = getCatConfig(place.category, customCategories)
   return (
     <tr className="border-b border-white/5 hover:bg-white/3 group transition-colors">
       {/* Category */}
@@ -130,9 +133,10 @@ export function AdminPage() {
   const { nodeId = 'phimai' } = useParams<{ nodeId: string }>()
   const { user } = useAuth()
 
-  const { node }            = useNode(nodeId)
-  const { places, loading } = usePlaces(nodeId)
-  const activeNode          = node ?? PIMAI_NODE
+  const { node }                                                         = useNode(nodeId)
+  const { places, loading }                                              = usePlaces(nodeId)
+  const { categories: customCategories, addCategory, deleteCategory }   = useCategories(nodeId)
+  const activeNode                                                       = node ?? PIMAI_NODE
 
   const [tab, setTab]               = useState<Tab>('dashboard')
   const [editingPlace, setEditing]  = useState<Place | null>(null)
@@ -140,7 +144,11 @@ export function AdminPage() {
   const [draft, setDraft]           = useState<{ lat: number; lng: number } | null>(null)
   const [saving, setSaving]         = useState(false)
   const [search, setSearch]         = useState('')
-  const [filterCat, setFilterCat]   = useState<Category | 'all'>('all')
+  const [filterCat, setFilterCat]   = useState<string>('all')
+  /* category form state */
+  const [catForm, setCatForm]       = useState({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1' })
+  const [catSaving, setCatSaving]   = useState(false)
+  const [showCatForm, setShowCatForm] = useState(false)
   const [toast, setToast]           = useState<{ msg: string; ok: boolean } | null>(null)
 
   // Node settings form
@@ -200,6 +208,7 @@ export function AdminPage() {
       desc_en:     data.desc_en.trim()    || null,
       desc_zh:     data.desc_zh.trim()    || null,
       price_range: data.price_range.trim() || null,
+      rating:      data.rating,
       phone:       data.phone.trim()      || null,
       line_id:     data.line_id.trim()    || null,
       image_url:   data.image_url.trim()  || null,
@@ -415,7 +424,8 @@ export function AdminPage() {
                           <PlaceRow key={p.id} place={p}
                             onEdit={openEdit}
                             onToggleActive={toggleActive}
-                            onToggleFeatured={toggleFeatured} />
+                            onToggleFeatured={toggleFeatured}
+                            customCategories={customCategories} />
                         ))}
                       </tbody>
                     </table>
@@ -517,7 +527,8 @@ export function AdminPage() {
                       <PlaceRow key={p.id} place={p}
                         onEdit={openEdit}
                         onToggleActive={toggleActive}
-                        onToggleFeatured={toggleFeatured} />
+                        onToggleFeatured={toggleFeatured}
+                        customCategories={customCategories} />
                     ))}
                   </tbody>
                 </table>
@@ -565,6 +576,7 @@ export function AdminPage() {
                 places={places}
                 draft={draft}
                 selectedId={editingPlace?.id ?? null}
+                customCategories={customCategories}
                 onDraftChange={d => {
                   setDraft(d)
                   if (!mapFormOpen) setMapForm(true)
@@ -593,6 +605,7 @@ export function AdminPage() {
                   draftLat={draft?.lat}
                   draftLng={draft?.lng}
                   saving={saving}
+                  customCategories={customCategories}
                   onSave={handleSave}
                   onDelete={editingPlace ? handleDelete : undefined}
                   onClose={closeForm}
@@ -650,6 +663,171 @@ export function AdminPage() {
                     💾 บันทึก Settings
                   </button>
                 </div>
+              </div>
+
+              {/* ── Categories Manager ── */}
+              <div className="bg-[#1a1d2b] rounded-2xl border border-white/5 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-white font-bold text-sm">หมวดหมู่สถานที่</h2>
+                  <button
+                    onClick={() => setShowCatForm(v => !v)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors font-semibold"
+                  >
+                    {showCatForm ? 'ยกเลิก' : '+ เพิ่มหมวดหมู่'}
+                  </button>
+                </div>
+
+                {/* Built-in */}
+                <div className="mb-3">
+                  <div className="text-xs text-gray-500 font-semibold mb-2">หมวดหมู่ built-in</div>
+                  <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.map(c => {
+                      const cfg = CAT_CONFIG[c]
+                      return (
+                        <div key={c} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium"
+                          style={{ background: `${cfg.color}18`, color: cfg.color, border: `1px solid ${cfg.color}30` }}>
+                          <span>{cfg.icon}</span>
+                          <span>{cfg.label.th}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom */}
+                {customCategories.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs text-gray-500 font-semibold mb-2">หมวดหมู่กำหนดเอง</div>
+                    <div className="space-y-1.5">
+                      {customCategories.map(c => (
+                        <div key={c.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/8">
+                          <span className="text-lg">{c.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white font-medium">{c.label_th}</div>
+                            <div className="text-xs text-gray-500 font-mono">{c.id}</div>
+                          </div>
+                          <div className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0"
+                            style={{ background: c.color }} />
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`ลบหมวดหมู่ "${c.label_th}"?`)) return
+                              const err = await deleteCategory(c.id)
+                              if (err) showToast('ลบไม่สำเร็จ', false)
+                              else showToast(`ลบ "${c.label_th}" แล้ว`)
+                            }}
+                            className="text-gray-600 hover:text-red-400 transition-colors text-sm ml-1"
+                          >✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add form */}
+                {showCatForm && (
+                  <div className="border-t border-white/5 pt-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">
+                          ID (ภาษาอังกฤษ ไม่มีช่องว่าง) *
+                        </label>
+                        <input
+                          className={INPUT}
+                          value={catForm.id}
+                          onChange={e => setCatForm(f => ({ ...f, id: e.target.value.toLowerCase().replace(/\s/g, '_') }))}
+                          placeholder="เช่น temple, market"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">ชื่อ (ไทย) *</label>
+                        <input
+                          className={INPUT}
+                          value={catForm.label_th}
+                          onChange={e => setCatForm(f => ({ ...f, label_th: e.target.value }))}
+                          placeholder="เช่น วัด, ตลาด"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Name (EN)</label>
+                        <input className={INPUT} value={catForm.label_en}
+                          onChange={e => setCatForm(f => ({ ...f, label_en: e.target.value }))} placeholder="e.g. Temple" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">名称 (ZH)</label>
+                        <input className={INPUT} value={catForm.label_zh}
+                          onChange={e => setCatForm(f => ({ ...f, label_zh: e.target.value }))} placeholder="例如：寺庙" />
+                      </div>
+                    </div>
+
+                    {/* Icon picker */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-2">
+                        ไอคอน — เลือก: <span className="text-white text-base">{catForm.icon}</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto p-2 bg-white/3 rounded-xl border border-white/8">
+                        {ICON_OPTIONS.map(emoji => (
+                          <button key={emoji} type="button"
+                            onClick={() => setCatForm(f => ({ ...f, icon: emoji }))}
+                            className="w-9 h-9 text-lg rounded-lg flex items-center justify-center transition-all hover:scale-110"
+                            style={{
+                              background: catForm.icon === emoji ? 'rgba(99,102,241,0.3)' : 'transparent',
+                              outline: catForm.icon === emoji ? '2px solid #6366F1' : 'none',
+                            }}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Color picker */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-2">
+                        สี — เลือก: <span className="font-mono text-white">{catForm.color}</span>
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {COLOR_OPTIONS.map(hex => (
+                          <button key={hex} type="button"
+                            onClick={() => setCatForm(f => ({ ...f, color: hex }))}
+                            className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+                            style={{
+                              background: hex,
+                              borderColor: catForm.color === hex ? 'white' : 'transparent',
+                            }} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      disabled={!catForm.id.trim() || !catForm.label_th.trim() || catSaving}
+                      onClick={async () => {
+                        setCatSaving(true)
+                        const err = await addCategory({
+                          id:         catForm.id.trim(),
+                          node_id:    nodeId,
+                          label_th:   catForm.label_th.trim(),
+                          label_en:   catForm.label_en.trim() || null,
+                          label_zh:   catForm.label_zh.trim() || null,
+                          icon:       catForm.icon,
+                          color:      catForm.color,
+                          sort_order: 99,
+                          is_active:  true,
+                        })
+                        setCatSaving(false)
+                        if (err) showToast('เพิ่มไม่สำเร็จ: ' + err.message, false)
+                        else {
+                          showToast(`เพิ่มหมวดหมู่ "${catForm.label_th}" แล้ว ✓`)
+                          setCatForm({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1' })
+                          setShowCatForm(false)
+                        }
+                      }}
+                      className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 transition-colors"
+                    >
+                      {catSaving ? 'กำลังบันทึก...' : '+ เพิ่มหมวดหมู่นี้'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Danger zone */}

@@ -4,24 +4,25 @@ import { DistrictMap }    from '../components/DistrictMap'
 import { InfoCard }       from '../components/InfoCard'
 import { PlaceCard }      from '../components/PlaceCard'
 import { LangToggle }     from '../components/LangToggle'
-import { usePlaces }  from '../hooks/usePlaces'
+import { usePlaces }      from '../hooks/usePlaces'
 import { useNode }        from '../hooks/useNode'
+import { useCategories }  from '../hooks/useCategories'
 import { PIMAI_NODE }     from '../data/pimai-mock'
-import type { Category, Lang, Place } from '../types/place'
-import { CAT_CONFIG, CATEGORIES, I18N } from '../types/place'
+import type { Lang, Place } from '../types/place'
+import { CAT_CONFIG, CATEGORIES, getCatConfig, I18N } from '../types/place'
 
 export function NodePage() {
   const { nodeId = 'phimai' } = useParams<{ nodeId: string }>()
 
   const [lang, setLang]         = useState<Lang>('th')
-  const [category, setCategory] = useState<Category | 'all'>('all')
+  const [category, setCategory] = useState<string>('all')
   const [view, setView]         = useState<'map' | 'list'>('map')
   const [selected, setSelected] = useState<Place | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  const { node, loading: nodeLoading } = useNode(nodeId)
-  // Always fetch ALL places, filter client-side — one subscription only
+  const { node, loading: nodeLoading }           = useNode(nodeId)
   const { places: allPlaces, loading: placesLoading } = usePlaces(nodeId)
+  const { categories: customCategories }         = useCategories(nodeId)
 
   const activeNode = node ?? PIMAI_NODE  // PIMAI_NODE only used while loading
   const t = I18N[lang]
@@ -84,13 +85,12 @@ export function NodePage() {
             }`}>{counts['all'] ?? 0}</span>
           </button>
 
+          {/* built-in categories */}
           {CATEGORIES.map(cat => {
             const cfg = CAT_CONFIG[cat]
             const isActive = category === cat
             return (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
+              <button key={cat} onClick={() => setCategory(cat)}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg mb-1 text-sm transition-colors ${
                   isActive ? 'text-white font-semibold' : 'text-gray-400 hover:bg-white/5 hover:text-white'
                 }`}
@@ -103,6 +103,27 @@ export function NodePage() {
                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/5 text-gray-500">
                   {counts[cat] ?? 0}
                 </span>
+              </button>
+            )
+          })}
+          {/* custom categories */}
+          {customCategories.map(cat => {
+            const cfg = getCatConfig(cat.id, customCategories)
+            const isActive = category === cat.id
+            const cnt = allPlaces.filter(p => p.category === cat.id).length
+            if (cnt === 0) return null
+            return (
+              <button key={cat.id} onClick={() => setCategory(cat.id)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg mb-1 text-sm transition-colors ${
+                  isActive ? 'text-white font-semibold' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                }`}
+                style={isActive ? { background: `${cfg.color}22`, border: `1px solid ${cfg.color}55` } : {}}
+              >
+                <span className="flex items-center gap-2">
+                  <span>{cfg.icon}</span>
+                  <span>{cfg.label[lang]}</span>
+                </span>
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/5 text-gray-500">{cnt}</span>
               </button>
             )
           })}
@@ -179,6 +200,7 @@ export function NodePage() {
               node={activeNode}
               places={places}
               lang={lang}
+              customCategories={customCategories}
               onPinClick={setSelected}
               selectedId={selected?.id}
             />
@@ -186,6 +208,7 @@ export function NodePage() {
               <InfoCard
                 place={selected}
                 lang={lang}
+                customCategories={customCategories}
                 onClose={() => setSelected(null)}
               />
             )}
@@ -206,6 +229,7 @@ export function NodePage() {
                     key={place.id}
                     place={place}
                     lang={lang}
+                    customCategories={customCategories}
                     onClick={() => { setView('map'); setSelected(place) }}
                   />
                 ))}
@@ -228,6 +252,15 @@ export function NodePage() {
                 <span>{counts[cat]}</span>
               </span>
             ))}
+            {customCategories.map(cat => {
+              const cnt = allPlaces.filter(p => p.category === cat.id).length
+              return cnt > 0 ? (
+                <span key={cat.id} className="text-gray-500 text-xs flex items-center gap-1">
+                  <span>{cat.icon}</span>
+                  <span>{cnt}</span>
+                </span>
+              ) : null
+            })}
           </div>
         )}
       </div>

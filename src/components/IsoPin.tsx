@@ -1,11 +1,12 @@
-import type { Category } from '../types/place'
+import type { Category, CatConfig } from '../types/place'
 
 interface IsoPinProps {
-  category: Category
-  featured?: boolean
-  selected?: boolean
-  scale?: number
-  onClick?: () => void
+  category:   string
+  catConfig?: CatConfig        // config ของ custom category (ถ้ามี)
+  featured?:  boolean
+  selected?:  boolean
+  scale?:     number
+  onClick?:   () => void
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -188,8 +189,26 @@ const SVG_MAP: Record<Category, () => JSX.Element> = {
   car:  CarSvg,
 }
 
-export function IsoPin({ category, featured = false, selected = false, scale = 1, onClick }: IsoPinProps) {
-  const SvgComponent = SVG_MAP[category]
+function EmojiPin({ icon, color }: { icon: string; color: string }) {
+  return (
+    <svg viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="76" rx="16" ry="4" fill="rgba(0,0,0,0.18)" />
+      {/* pin body */}
+      <path
+        d="M32 6 C19 6 10 17 10 28 C10 46 32 74 32 74 C32 74 54 46 54 28 C54 17 45 6 32 6 Z"
+        fill={color}
+      />
+      <circle cx="32" cy="28" r="13" fill="white" opacity="0.92" />
+      <text x="32" y="33" textAnchor="middle" fontSize="15" fontFamily="system-ui, sans-serif">
+        {icon}
+      </text>
+    </svg>
+  )
+}
+
+export function IsoPin({ category, catConfig, featured = false, selected = false, scale = 1, onClick }: IsoPinProps) {
+  const builtIn = SVG_MAP[category as Category]
+  const SvgComponent = builtIn ?? null
 
   return (
     <div
@@ -209,7 +228,13 @@ export function IsoPin({ category, featured = false, selected = false, scale = 1
         transformOrigin: 'bottom center',
       }}
     >
-      <SvgComponent />
+      {SvgComponent
+        ? <SvgComponent />
+        : <EmojiPin
+            icon={catConfig?.icon ?? '📍'}
+            color={catConfig?.color ?? '#6366F1'}
+          />
+      }
       {featured && (
         <div
           style={{

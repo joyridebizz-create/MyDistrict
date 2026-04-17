@@ -1,17 +1,18 @@
-import { CAT_CONFIG } from '../types/place'
+import { getCatConfig } from '../types/place'
 import { navigate } from '../lib/navigate'
-import type { Place, Lang } from '../types/place'
+import type { Place, Lang, CustomCategory } from '../types/place'
 import { I18N } from '../types/place'
 
 interface InfoCardProps {
   place: Place
   lang: Lang
+  customCategories?: CustomCategory[]
   onClose: () => void
 }
 
-export function InfoCard({ place, lang, onClose }: InfoCardProps) {
+export function InfoCard({ place, lang, customCategories = [], onClose }: InfoCardProps) {
   const t   = I18N[lang]
-  const cat = CAT_CONFIG[place.category]
+  const cat = getCatConfig(place.category, customCategories)
   const name = (lang === 'en' ? place.name_en : lang === 'zh' ? place.name_zh : null) ?? place.name
   const desc = (lang === 'en' ? place.desc_en  : lang === 'zh' ? place.desc_zh  : null) ?? place.description
 

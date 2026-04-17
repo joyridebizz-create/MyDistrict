@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { IsoPin } from './IsoPin'
-import type { Place, Node, Category, Lang } from '../types/place'
-import { CAT_CONFIG } from '../types/place'
+import type { Place, Node, Lang, CustomCategory } from '../types/place'
+import { getCatConfig } from '../types/place'
 
 /* ── Tile layers (CARTO — works on file:// and production) ── */
 const TILE_URLS = {
@@ -26,11 +26,12 @@ interface DistrictMapProps {
   node: Node
   places: Place[]
   lang?: Lang
+  customCategories?: CustomCategory[]
   onPinClick?: (place: Place) => void
   selectedId?: string | null
 }
 
-export function DistrictMap({ node, places, lang = 'th', onPinClick, selectedId }: DistrictMapProps) {
+export function DistrictMap({ node, places, lang = 'th', customCategories = [], onPinClick, selectedId }: DistrictMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef          = useRef<L.Map | null>(null)
   const tileRef         = useRef<L.TileLayer | null>(null)
@@ -129,7 +130,7 @@ export function DistrictMap({ node, places, lang = 'th', onPinClick, selectedId 
           if (!pos.visible) return null
           const place = placeMap[pos.id]
           if (!place) return null
-          const cat   = CAT_CONFIG[place.category as Category]
+          const cat   = getCatConfig(place.category, customCategories)
           const isSelected = selectedId === place.id
           const pinW  = 64 * pos.scale
           const pinH  = 80 * pos.scale
@@ -150,7 +151,8 @@ export function DistrictMap({ node, places, lang = 'th', onPinClick, selectedId 
             >
               {/* Building icon */}
               <IsoPin
-                category={place.category as Category}
+                category={place.category}
+                catConfig={cat}
                 featured={place.is_featured}
                 scale={pos.scale}
                 selected={isSelected}

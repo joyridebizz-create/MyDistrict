@@ -3,8 +3,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { parseGMapsURL } from '../../lib/parseGMapsURL'
 import { IsoPin } from '../IsoPin'
-import type { Place, Node, Category } from '../../types/place'
-import { CAT_CONFIG } from '../../types/place'
+import type { Place, Node, CustomCategory } from '../../types/place'
+import { getCatConfig } from '../../types/place'
 
 const TILE_URLS = {
   Retro: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -18,12 +18,13 @@ interface AdminMapPickerProps {
   places: Place[]
   draft: DraftPin | null
   selectedId: string | null
+  customCategories?: CustomCategory[]
   onDraftChange: (pin: DraftPin) => void
   onSelectPlace: (place: Place) => void
 }
 
 export function AdminMapPicker({
-  node, places, draft, selectedId, onDraftChange, onSelectPlace,
+  node, places, draft, selectedId, customCategories = [], onDraftChange, onSelectPlace,
 }: AdminMapPickerProps) {
   const containerRef  = useRef<HTMLDivElement>(null)
   const mapRef        = useRef<L.Map | null>(null)
@@ -164,7 +165,7 @@ export function AdminMapPicker({
         {pinPositions.map(pos => {
           const place = placeMap[pos.id]
           if (!place) return null
-          const cat   = CAT_CONFIG[place.category as Category]
+          const cat   = getCatConfig(place.category, customCategories)
           const isSel = selectedId === place.id
           const pinW  = 64 * pos.scale
           const pinH  = 80 * pos.scale
@@ -186,7 +187,7 @@ export function AdminMapPicker({
               }}
               onClick={() => onSelectPlace(place)}
             >
-              <IsoPin category={place.category as Category} featured={place.is_featured} scale={pos.scale} selected={isSel} />
+              <IsoPin category={place.category} catConfig={cat} featured={place.is_featured} scale={pos.scale} selected={isSel} />
               <div style={{ marginTop: 2, textAlign: 'center', pointerEvents: 'none' }}>
                 <span style={{
                   display: 'inline-block',

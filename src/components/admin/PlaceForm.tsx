@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
 import { IsoPin } from '../IsoPin'
-import type { Place, Category } from '../../types/place'
-import { CAT_CONFIG, CATEGORIES } from '../../types/place'
+import type { Place, CustomCategory } from '../../types/place'
+import { CAT_CONFIG, CATEGORIES, getCatConfig } from '../../types/place'
 
 export interface PlaceFormData {
   name:        string
   name_en:     string
   name_zh:     string
-  category:    Category
+  category:    string
   lat:         number | null
   lng:         number | null
   description: string
   desc_en:     string
   desc_zh:     string
   price_range: string
+  rating:      number
   phone:       string
   line_id:     string
   image_url:   string
@@ -26,18 +27,20 @@ const EMPTY: PlaceFormData = {
   category: 'tour',
   lat: null, lng: null,
   description: '', desc_en: '', desc_zh: '',
-  price_range: '', phone: '', line_id: '', image_url: '',
+  price_range: '', rating: 0,
+  phone: '', line_id: '', image_url: '',
   is_featured: false, is_active: true,
 }
 
 interface PlaceFormProps {
-  initial?:  Place | null
-  draftLat?: number | null
-  draftLng?: number | null
-  saving:    boolean
-  onSave:    (data: PlaceFormData) => void
-  onDelete?: () => void
-  onClose:   () => void
+  initial?:          Place | null
+  draftLat?:         number | null
+  draftLng?:         number | null
+  saving:            boolean
+  customCategories?: CustomCategory[]
+  onSave:            (data: PlaceFormData) => void
+  onDelete?:         () => void
+  onClose:           () => void
 }
 
 type TabKey = 'th' | 'en_zh' | 'info'
@@ -54,7 +57,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export function PlaceForm({ initial, draftLat, draftLng, saving, onSave, onDelete, onClose }: PlaceFormProps) {
+export function PlaceForm({ initial, draftLat, draftLng, saving, customCategories = [], onSave, onDelete, onClose }: PlaceFormProps) {
   const isEdit = !!initial
   const [tab, setTab] = useState<TabKey>('th')
   const [data, setData] = useState<PlaceFormData>(() => {
@@ -70,6 +73,7 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, onSave, onDelet
         desc_en:     initial.desc_en    ?? '',
         desc_zh:     initial.desc_zh    ?? '',
         price_range: initial.price_range ?? '',
+        rating:      initial.rating      ?? 0,
         phone:       initial.phone       ?? '',
         line_id:     initial.line_id     ?? '',
         image_url:   initial.image_url   ?? '',
@@ -151,7 +155,7 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, onSave, onDelet
     }
   }
 
-  const cat = CAT_CONFIG[data.category]
+  const cat = getCatConfig(data.category, customCategories)
   const hasCoords = data.lat != null && data.lng != null
 
   const TABS: { id: TabKey; label: string }[] = [
@@ -180,23 +184,37 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, onSave, onDelet
       <div className="px-4 pt-3 pb-2">
         <div className={LABEL}>หมวดหมู่</div>
         <div className="grid grid-cols-5 gap-1">
+          {/* built-in */}
           {CATEGORIES.map(c => {
-            const cfg  = CAT_CONFIG[c]
-            const isA  = data.category === c
+            const cfg = CAT_CONFIG[c]
+            const isA = data.category === c
             return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => set('category', c)}
+              <button key={c} type="button" onClick={() => set('category', c)}
                 className="flex flex-col items-center gap-1 py-2 rounded-xl transition-all border"
                 style={{
-                  background:   isA ? `${cfg.color}22` : 'rgba(255,255,255,0.04)',
-                  borderColor:  isA ? `${cfg.color}66` : 'rgba(255,255,255,0.08)',
-                }}
-              >
+                  background:  isA ? `${cfg.color}22` : 'rgba(255,255,255,0.04)',
+                  borderColor: isA ? `${cfg.color}66` : 'rgba(255,255,255,0.08)',
+                }}>
                 <IsoPin category={c} scale={0.35} />
                 <span className="text-xs font-semibold" style={{ color: isA ? cfg.color : '#666' }}>
                   {cfg.label.th}
+                </span>
+              </button>
+            )
+          })}
+          {/* custom categories */}
+          {customCategories.map(c => {
+            const isA = data.category === c.id
+            return (
+              <button key={c.id} type="button" onClick={() => set('category', c.id)}
+                className="flex flex-col items-center gap-1 py-2 rounded-xl transition-all border"
+                style={{
+                  background:  isA ? `${c.color}22` : 'rgba(255,255,255,0.04)',
+                  borderColor: isA ? `${c.color}66` : 'rgba(255,255,255,0.08)',
+                }}>
+                <IsoPin category={c.id} catConfig={{ icon: c.icon, color: c.color, label: { th: c.label_th, en: c.label_en ?? c.label_th, zh: c.label_zh ?? c.label_th } }} scale={0.35} />
+                <span className="text-xs font-semibold truncate w-full text-center px-0.5" style={{ color: isA ? c.color : '#666' }}>
+                  {c.label_th}
                 </span>
               </button>
             )
@@ -321,6 +339,31 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, onSave, onDelet
           <>
             <Field label="ราคา / ค่าเข้า">
               <input className={INPUT} value={data.price_range} onChange={e => set('price_range', e.target.value)} placeholder="เช่น ฿ 100/คน หรือ ฟรี" />
+            </Field>
+
+            <Field label="คะแนน (0 = ยังไม่มีคะแนน)">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => set('rating', data.rating === star ? 0 : star)}
+                    className="text-3xl leading-none transition-transform hover:scale-110 focus:outline-none"
+                    style={{ color: star <= data.rating ? '#FACC15' : '#374151' }}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span className="ml-2 text-sm text-gray-400 min-w-[3rem]">
+                  {data.rating > 0 ? `${data.rating}.0` : '—'}
+                </span>
+                {data.rating > 0 && (
+                  <button type="button" onClick={() => set('rating', 0)}
+                    className="text-xs text-gray-500 hover:text-red-400 transition-colors ml-1">
+                    ล้าง
+                  </button>
+                )}
+              </div>
             </Field>
             <Field label="เบอร์โทรศัพท์">
               <input className={INPUT} type="tel" value={data.phone} onChange={e => set('phone', e.target.value)} placeholder="044-XXXXXX" />
