@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── ISO Pin animations ── */
+@keyframes pinBob {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-5px); }
+}
+
+@keyframes rippleOut {
+  0%   { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0;   }
+}
+
+@keyframes smokeDrift {
+  0%   { opacity: 0.6; transform: translateY(0) scale(1); }
+  100% { opacity: 0;   transform: translateY(-28px) scale(2.8); }
+}
+
+/* ── Featured pin pulse ring ── */
+.iso-pin-featured::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid gold;
+  animation: rippleOut 2s ease-out infinite;
+}
+
+/* ── Leaflet overrides ── */
+.leaflet-container {
+  font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+}
+
+/* ── Hide scrollbar on filter strip ── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Full height root ── */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
