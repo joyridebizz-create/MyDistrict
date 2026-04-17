@@ -21,6 +21,7 @@ export interface PlaceFormData {
   image_url:   string
   is_featured: boolean
   is_active:   boolean
+  images:      string[]   // additional gallery photos (up to 5)
 }
 
 const EMPTY: PlaceFormData = {
@@ -31,6 +32,7 @@ const EMPTY: PlaceFormData = {
   price_range: '', rating: 0,
   phone: '', line_id: '', image_url: '',
   is_featured: false, is_active: true,
+  images: [],
 }
 
 interface PlaceFormProps {
@@ -82,6 +84,7 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
         image_url:   initial.image_url   ?? '',
         is_featured: initial.is_featured,
         is_active:   initial.is_active,
+        images:      initial.images ?? [],
       }
     }
     return { ...EMPTY }
@@ -432,9 +435,69 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
             <Field label="LINE ID">
               <input className={INPUT} value={data.line_id} onChange={e => set('line_id', e.target.value)} placeholder="@yourline" />
             </Field>
-            <Field label="URL รูปภาพ">
+            <Field label="URL รูปภาพหลัก (Thumbnail)">
               <input className={INPUT} type="url" value={data.image_url} onChange={e => set('image_url', e.target.value)} placeholder="https://..." />
             </Field>
+
+            {/* Gallery images */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className={LABEL + ' mb-0'}>
+                  รูปเพิ่มเติม ({data.images.length}/5)
+                </label>
+                {data.images.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => set('images', [...data.images, ''])}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    + เพิ่ม URL
+                  </button>
+                )}
+              </div>
+
+              {/* Preview strip */}
+              {(data.image_url || data.images.some(Boolean)) && (
+                <div className="flex gap-1 mb-2">
+                  {[data.image_url, ...data.images].filter(Boolean).slice(0, 5).map((url, i) => (
+                    <div key={i}
+                      className="flex-1 aspect-square rounded-lg overflow-hidden bg-white/5 border border-white/10 max-w-[64px]">
+                      <img src={url} alt="" className="w-full h-full object-cover"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* URL inputs */}
+              <div className="space-y-1.5">
+                {data.images.map((url, i) => (
+                  <div key={i} className="flex gap-1.5">
+                    <input
+                      className={INPUT + ' flex-1'}
+                      type="url"
+                      value={url}
+                      onChange={e => {
+                        const arr = [...data.images]
+                        arr[i] = e.target.value
+                        set('images', arr)
+                      }}
+                      placeholder={`https://... (ภาพที่ ${i + 2})`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => set('images', data.images.filter((_, j) => j !== i))}
+                      className="px-2 text-gray-600 hover:text-red-400 transition-colors text-sm"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                {data.images.length === 0 && (
+                  <p className="text-xs text-gray-600">กดปุ่ม "+ เพิ่ม URL" เพื่อใส่ภาพเพิ่มเติม</p>
+                )}
+              </div>
+            </div>
 
             {/* Toggles */}
             <div className="space-y-2 pt-1">

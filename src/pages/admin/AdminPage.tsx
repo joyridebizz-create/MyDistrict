@@ -224,6 +224,9 @@ export function AdminPage() {
       phone:       data.phone.trim()      || null,
       line_id:     data.line_id.trim()    || null,
       image_url:   data.image_url.trim()  || null,
+      images:      data.images.filter(Boolean).length > 0
+                   ? data.images.filter(Boolean)
+                   : null,
       is_featured: data.is_featured,
       is_active:   data.is_active,
     }

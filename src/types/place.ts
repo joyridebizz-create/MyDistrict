@@ -26,6 +26,7 @@ export interface Place {
   price_range: string | null
   rating: number
   subcategory: string | null
+  images: string[] | null        // additional gallery images (up to 5)
   phone: string | null
   line_id: string | null
   image_url: string | null
