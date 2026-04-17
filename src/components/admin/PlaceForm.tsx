@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { IsoPin } from '../IsoPin'
 import type { Place, CustomCategory, SubCategory } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig } from '../../types/place'
+import { ImageUploader } from './ImageUploader'
 
 export interface PlaceFormData {
   name:        string
@@ -40,8 +41,9 @@ interface PlaceFormProps {
   draftLat?:          number | null
   draftLng?:          number | null
   saving:             boolean
+  nodeId?:            string
   customCategories?:  CustomCategory[]
-  subcategories?:     SubCategory[]   // all subcategories for this node
+  subcategories?:     SubCategory[]
   onSave:             (data: PlaceFormData) => void
   onDelete?:          () => void
   onClose:            () => void
@@ -61,7 +63,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export function PlaceForm({ initial, draftLat, draftLng, saving, customCategories = [], subcategories = [], onSave, onDelete, onClose }: PlaceFormProps) {
+export function PlaceForm({ initial, draftLat, draftLng, saving, nodeId = 'default', customCategories = [], subcategories = [], onSave, onDelete, onClose }: PlaceFormProps) {
   const isEdit = !!initial
   const [tab, setTab] = useState<TabKey>('th')
   const [data, setData] = useState<PlaceFormData>(() => {
@@ -435,66 +437,60 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
             <Field label="LINE ID">
               <input className={INPUT} value={data.line_id} onChange={e => set('line_id', e.target.value)} placeholder="@yourline" />
             </Field>
-            <Field label="URL รูปภาพหลัก (Thumbnail)">
-              <input className={INPUT} type="url" value={data.image_url} onChange={e => set('image_url', e.target.value)} placeholder="https://..." />
-            </Field>
+            {/* Main image */}
+            <ImageUploader
+              label="รูปภาพหลัก"
+              value={data.image_url}
+              onChange={url => set('image_url', url)}
+              nodeId={nodeId}
+              placeholder="https://... (หรืออัพโหลดจากเครื่อง)"
+            />
 
-            {/* Gallery images */}
+            {/* Gallery images (up to 5 additional) */}
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <label className={LABEL + ' mb-0'}>
-                  รูปเพิ่มเติม ({data.images.length}/5)
+                  ภาพแกลเลอรีเพิ่มเติม ({data.images.filter(Boolean).length}/5)
                 </label>
                 {data.images.length < 5 && (
                   <button
                     type="button"
                     onClick={() => set('images', [...data.images, ''])}
-                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium"
                   >
-                    + เพิ่ม URL
+                    + เพิ่มช่อง
                   </button>
                 )}
               </div>
 
-              {/* Preview strip */}
-              {(data.image_url || data.images.some(Boolean)) && (
-                <div className="flex gap-1 mb-2">
-                  {[data.image_url, ...data.images].filter(Boolean).slice(0, 5).map((url, i) => (
-                    <div key={i}
-                      className="flex-1 aspect-square rounded-lg overflow-hidden bg-white/5 border border-white/10 max-w-[64px]">
-                      <img src={url} alt="" className="w-full h-full object-cover"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* URL inputs */}
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 {data.images.map((url, i) => (
-                  <div key={i} className="flex gap-1.5">
-                    <input
-                      className={INPUT + ' flex-1'}
-                      type="url"
+                  <div key={i} className="relative">
+                    <ImageUploader
+                      label={`ภาพที่ ${i + 2}`}
                       value={url}
-                      onChange={e => {
+                      onChange={newUrl => {
                         const arr = [...data.images]
-                        arr[i] = e.target.value
+                        arr[i] = newUrl
                         set('images', arr)
                       }}
+                      nodeId={nodeId}
+                      thumbnail
                       placeholder={`https://... (ภาพที่ ${i + 2})`}
                     />
                     <button
                       type="button"
                       onClick={() => set('images', data.images.filter((_, j) => j !== i))}
-                      className="px-2 text-gray-600 hover:text-red-400 transition-colors text-sm"
+                      className="absolute top-0 right-0 text-xs text-gray-600 hover:text-red-400 transition-colors px-1"
                     >
-                      ✕
+                      ✕ ลบ
                     </button>
                   </div>
                 ))}
                 {data.images.length === 0 && (
-                  <p className="text-xs text-gray-600">กดปุ่ม "+ เพิ่ม URL" เพื่อใส่ภาพเพิ่มเติม</p>
+                  <p className="text-xs text-gray-600 py-1">
+                    กด "+ เพิ่มช่อง" เพื่อเพิ่มภาพแกลเลอรี (สูงสุด 5 ภาพ)
+                  </p>
                 )}
               </div>
             </div>

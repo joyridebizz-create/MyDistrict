@@ -620,6 +620,7 @@ export function AdminPage() {
                   draftLat={draft?.lat}
                   draftLng={draft?.lng}
                   saving={saving}
+                  nodeId={nodeId}
                   customCategories={customCategories}
                   subcategories={subcategories}
                   onSave={handleSave}
