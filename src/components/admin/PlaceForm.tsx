@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { IsoPin } from '../IsoPin'
-import type { Place, CustomCategory } from '../../types/place'
+import type { Place, CustomCategory, SubCategory } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig } from '../../types/place'
 
 export interface PlaceFormData {
@@ -8,6 +8,7 @@ export interface PlaceFormData {
   name_en:     string
   name_zh:     string
   category:    string
+  subcategory: string
   lat:         number | null
   lng:         number | null
   description: string
@@ -24,7 +25,7 @@ export interface PlaceFormData {
 
 const EMPTY: PlaceFormData = {
   name: '', name_en: '', name_zh: '',
-  category: 'tour',
+  category: 'tour', subcategory: '',
   lat: null, lng: null,
   description: '', desc_en: '', desc_zh: '',
   price_range: '', rating: 0,
@@ -33,14 +34,15 @@ const EMPTY: PlaceFormData = {
 }
 
 interface PlaceFormProps {
-  initial?:          Place | null
-  draftLat?:         number | null
-  draftLng?:         number | null
-  saving:            boolean
-  customCategories?: CustomCategory[]
-  onSave:            (data: PlaceFormData) => void
-  onDelete?:         () => void
-  onClose:           () => void
+  initial?:           Place | null
+  draftLat?:          number | null
+  draftLng?:          number | null
+  saving:             boolean
+  customCategories?:  CustomCategory[]
+  subcategories?:     SubCategory[]   // all subcategories for this node
+  onSave:             (data: PlaceFormData) => void
+  onDelete?:          () => void
+  onClose:            () => void
 }
 
 type TabKey = 'th' | 'en_zh' | 'info'
@@ -57,7 +59,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export function PlaceForm({ initial, draftLat, draftLng, saving, customCategories = [], onSave, onDelete, onClose }: PlaceFormProps) {
+export function PlaceForm({ initial, draftLat, draftLng, saving, customCategories = [], subcategories = [], onSave, onDelete, onClose }: PlaceFormProps) {
   const isEdit = !!initial
   const [tab, setTab] = useState<TabKey>('th')
   const [data, setData] = useState<PlaceFormData>(() => {
@@ -72,6 +74,7 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
         description: initial.description ?? '',
         desc_en:     initial.desc_en    ?? '',
         desc_zh:     initial.desc_zh    ?? '',
+        subcategory: initial.subcategory  ?? '',
         price_range: initial.price_range ?? '',
         rating:      initial.rating      ?? 0,
         phone:       initial.phone       ?? '',
@@ -156,6 +159,8 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
   }
 
   const cat = getCatConfig(data.category, customCategories)
+  /** subcategories ของหมวดที่เลือกอยู่ */
+  const subcatOptions = subcategories.filter(s => s.parent_category === data.category)
   const hasCoords = data.lat != null && data.lng != null
 
   const TABS: { id: TabKey; label: string }[] = [
@@ -221,6 +226,44 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
           })}
         </div>
       </div>
+
+      {/* ── Subcategory selector (shows only when subcats exist) ── */}
+      {subcatOptions.length > 0 && (
+        <div className="px-4 pb-2">
+          <div className={LABEL}>
+            หมวดหมู่ย่อย
+            {data.subcategory && (
+              <button
+                type="button"
+                onClick={() => set('subcategory', '')}
+                className="ml-2 text-gray-600 hover:text-red-400 transition-colors text-xs font-normal"
+              >
+                ล้าง ✕
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {subcatOptions.map(sub => {
+              const isA = data.subcategory === sub.id
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => set('subcategory', isA ? '' : sub.id)}
+                  className="px-2.5 py-1 rounded-full text-xs font-medium transition-all border"
+                  style={{
+                    background:  isA ? `${cat.color}25` : 'rgba(255,255,255,0.05)',
+                    borderColor: isA ? `${cat.color}60` : 'rgba(255,255,255,0.10)',
+                    color:       isA ? cat.color : '#9CA3AF',
+                  }}
+                >
+                  {sub.label_th}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Location indicator ── */}
       <div className="px-4 pb-2">

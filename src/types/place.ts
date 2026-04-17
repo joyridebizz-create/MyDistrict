@@ -25,6 +25,7 @@ export interface Place {
   desc_zh: string | null
   price_range: string | null
   rating: number
+  subcategory: string | null
   phone: string | null
   line_id: string | null
   image_url: string | null
@@ -41,6 +42,18 @@ export interface CustomCategory {
   label_zh: string | null
   icon: string         // emoji
   color: string        // hex
+  sort_order: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface SubCategory {
+  id: string           // e.g. 'northeastern', 'resort'
+  node_id: string
+  parent_category: string   // built-in or custom category key
+  label_th: string
+  label_en: string | null
+  label_zh: string | null
   sort_order: number
   is_active: boolean
   created_at: string

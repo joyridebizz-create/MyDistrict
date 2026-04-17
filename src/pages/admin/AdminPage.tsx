@@ -4,7 +4,8 @@ import { supabase }         from '../../lib/supabase'
 import { useAuth }          from '../../hooks/useAuth'
 import { usePlaces }        from '../../hooks/usePlaces'
 import { useNode }          from '../../hooks/useNode'
-import { useCategories }    from '../../hooks/useCategories'
+import { useCategories }     from '../../hooks/useCategories'
+import { useSubcategories }  from '../../hooks/useSubcategories'
 import { PIMAI_NODE }       from '../../data/pimai-mock'
 import { AdminMapPicker }   from '../../components/admin/AdminMapPicker'
 import { PlaceForm }        from '../../components/admin/PlaceForm'
@@ -135,7 +136,8 @@ export function AdminPage() {
 
   const { node }                                                         = useNode(nodeId)
   const { places, loading }                                              = usePlaces(nodeId)
-  const { categories: customCategories, addCategory, deleteCategory }   = useCategories(nodeId)
+  const { categories: customCategories, addCategory, deleteCategory }           = useCategories(nodeId)
+  const { subcategories, byCategory: subcatByCategory, addSubcategory, deleteSubcategory } = useSubcategories(nodeId)
   const activeNode                                                       = node ?? PIMAI_NODE
 
   const [tab, setTab]               = useState<Tab>('dashboard')
@@ -146,9 +148,13 @@ export function AdminPage() {
   const [search, setSearch]         = useState('')
   const [filterCat, setFilterCat]   = useState<string>('all')
   /* category form state */
-  const [catForm, setCatForm]       = useState({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1' })
-  const [catSaving, setCatSaving]   = useState(false)
+  const [catForm, setCatForm]         = useState({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1' })
+  const [catSaving, setCatSaving]     = useState(false)
   const [showCatForm, setShowCatForm] = useState(false)
+  /* subcategory form state */
+  const [subcatForm, setSubcatForm]     = useState({ id: '', parent_category: 'food', label_th: '', label_en: '', label_zh: '' })
+  const [subcatSaving, setSubcatSaving] = useState(false)
+  const [showSubcatForm, setShowSubcatForm] = useState<string | null>(null) // holds parent_category key
   const [toast, setToast]           = useState<{ msg: string; ok: boolean } | null>(null)
 
   // Node settings form
@@ -207,6 +213,7 @@ export function AdminPage() {
       description: data.description.trim() || null,
       desc_en:     data.desc_en.trim()    || null,
       desc_zh:     data.desc_zh.trim()    || null,
+      subcategory: data.subcategory.trim() || null,
       price_range: data.price_range.trim() || null,
       rating:      data.rating,
       phone:       data.phone.trim()      || null,
@@ -606,6 +613,7 @@ export function AdminPage() {
                   draftLng={draft?.lng}
                   saving={saving}
                   customCategories={customCategories}
+                  subcategories={subcategories}
                   onSave={handleSave}
                   onDelete={editingPlace ? handleDelete : undefined}
                   onClose={closeForm}
@@ -828,6 +836,124 @@ export function AdminPage() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* ── Subcategories Manager ── */}
+              <div className="bg-[#1a1d2b] rounded-2xl border border-white/5 p-5">
+                <h2 className="text-white font-bold text-sm mb-1">หมวดหมู่ย่อย</h2>
+                <p className="text-gray-500 text-xs mb-4">
+                  กำหนดตัวเลือกย่อยสำหรับแต่ละหมวดหมู่ เช่น อาหาร → อาหารอีสาน, โรงแรม ฯลฯ
+                </p>
+
+                {/* List grouped by parent category */}
+                {[...CATEGORIES, ...customCategories.map(c => c.id)].map(catKey => {
+                  const cfg = getCatConfig(catKey, customCategories)
+                  const subs = subcatByCategory[catKey] ?? []
+                  const isOpen = showSubcatForm === catKey
+                  return (
+                    <div key={catKey} className="mb-3 last:mb-0">
+                      {/* Category header */}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold"
+                          style={{ color: cfg.color }}>
+                          <span>{cfg.icon}</span>
+                          <span>{cfg.label.th}</span>
+                          <span className="text-gray-600 font-normal">({subs.length})</span>
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (isOpen) { setShowSubcatForm(null) }
+                            else { setShowSubcatForm(catKey); setSubcatForm(f => ({ ...f, parent_category: catKey, id: '', label_th: '', label_en: '', label_zh: '' })) }
+                          }}
+                          className="text-xs px-2 py-0.5 rounded-lg bg-white/5 text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+                        >
+                          {isOpen ? 'ยกเลิก' : '+ เพิ่ม'}
+                        </button>
+                      </div>
+
+                      {/* Existing subcategory tags */}
+                      {subs.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {subs.map(sub => (
+                            <span key={sub.id}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-white/10 bg-white/5 text-gray-300"
+                            >
+                              {sub.label_th}
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`ลบ "${sub.label_th}"?`)) return
+                                  const err = await deleteSubcategory(sub.id)
+                                  if (err) showToast('ลบไม่สำเร็จ', false)
+                                  else showToast(`ลบ "${sub.label_th}" แล้ว`)
+                                }}
+                                className="text-gray-600 hover:text-red-400 transition-colors leading-none ml-0.5"
+                              >✕</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add subcategory inline form */}
+                      {isOpen && (
+                        <div className="bg-white/3 border border-white/8 rounded-xl p-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-500 mb-1">ID (EN) *</label>
+                              <input className={INPUT} value={subcatForm.id}
+                                onChange={e => setSubcatForm(f => ({ ...f, id: e.target.value.toLowerCase().replace(/\s/g, '_') }))}
+                                placeholder="เช่น northeastern" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-500 mb-1">ชื่อ (ไทย) *</label>
+                              <input className={INPUT} value={subcatForm.label_th}
+                                onChange={e => setSubcatForm(f => ({ ...f, label_th: e.target.value }))}
+                                placeholder="เช่น อาหารอีสาน" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-500 mb-1">EN</label>
+                              <input className={INPUT} value={subcatForm.label_en}
+                                onChange={e => setSubcatForm(f => ({ ...f, label_en: e.target.value }))}
+                                placeholder="e.g. Northeastern" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-500 mb-1">ZH</label>
+                              <input className={INPUT} value={subcatForm.label_zh}
+                                onChange={e => setSubcatForm(f => ({ ...f, label_zh: e.target.value }))}
+                                placeholder="例：东北菜" />
+                            </div>
+                          </div>
+                          <button
+                            disabled={!subcatForm.id.trim() || !subcatForm.label_th.trim() || subcatSaving}
+                            onClick={async () => {
+                              setSubcatSaving(true)
+                              const err = await addSubcategory({
+                                id:              subcatForm.id.trim(),
+                                node_id:         nodeId,
+                                parent_category: catKey,
+                                label_th:        subcatForm.label_th.trim(),
+                                label_en:        subcatForm.label_en.trim() || null,
+                                label_zh:        subcatForm.label_zh.trim() || null,
+                                sort_order:      99,
+                                is_active:       true,
+                              })
+                              setSubcatSaving(false)
+                              if (err) showToast('เพิ่มไม่สำเร็จ: ' + err.message, false)
+                              else {
+                                showToast(`เพิ่ม "${subcatForm.label_th}" แล้ว ✓`)
+                                setShowSubcatForm(null)
+                              }
+                            }}
+                            className="w-full py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 transition-colors"
+                          >
+                            {subcatSaving ? 'กำลังบันทึก...' : '+ เพิ่มหมวดย่อยนี้'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Danger zone */}

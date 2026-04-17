@@ -6,7 +6,8 @@ import { PlaceCard }      from '../components/PlaceCard'
 import { LangToggle }     from '../components/LangToggle'
 import { usePlaces }      from '../hooks/usePlaces'
 import { useNode }        from '../hooks/useNode'
-import { useCategories }  from '../hooks/useCategories'
+import { useCategories }    from '../hooks/useCategories'
+import { useSubcategories }  from '../hooks/useSubcategories'
 import { PIMAI_NODE }     from '../data/pimai-mock'
 import type { Lang, Place } from '../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig, I18N } from '../types/place'
@@ -23,6 +24,7 @@ export function NodePage() {
   const { node, loading: nodeLoading }           = useNode(nodeId)
   const { places: allPlaces, loading: placesLoading } = usePlaces(nodeId)
   const { categories: customCategories }         = useCategories(nodeId)
+  const { subcategories }                        = useSubcategories(nodeId)
 
   const activeNode = node ?? PIMAI_NODE  // PIMAI_NODE only used while loading
   const t = I18N[lang]
@@ -209,6 +211,7 @@ export function NodePage() {
                 place={selected}
                 lang={lang}
                 customCategories={customCategories}
+                subcategories={subcategories}
                 onClose={() => setSelected(null)}
               />
             )}
@@ -230,6 +233,7 @@ export function NodePage() {
                     place={place}
                     lang={lang}
                     customCategories={customCategories}
+                    subcategories={subcategories}
                     onClick={() => { setView('map'); setSelected(place) }}
                   />
                 ))}

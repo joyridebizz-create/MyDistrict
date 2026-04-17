@@ -1,18 +1,25 @@
 import { getCatConfig } from '../types/place'
 import { navigate } from '../lib/navigate'
-import type { Place, Lang, CustomCategory } from '../types/place'
+import type { Place, Lang, CustomCategory, SubCategory } from '../types/place'
 import { I18N } from '../types/place'
 
 interface InfoCardProps {
   place: Place
   lang: Lang
   customCategories?: CustomCategory[]
+  subcategories?:    SubCategory[]
   onClose: () => void
 }
 
-export function InfoCard({ place, lang, customCategories = [], onClose }: InfoCardProps) {
+export function InfoCard({ place, lang, customCategories = [], subcategories = [], onClose }: InfoCardProps) {
   const t   = I18N[lang]
   const cat = getCatConfig(place.category, customCategories)
+  const sub = place.subcategory
+    ? subcategories.find(s => s.id === place.subcategory)
+    : null
+  const subLabel = sub
+    ? ((lang === 'en' ? sub.label_en : lang === 'zh' ? sub.label_zh : null) ?? sub.label_th)
+    : null
   const name = (lang === 'en' ? place.name_en : lang === 'zh' ? place.name_zh : null) ?? place.name
   const desc = (lang === 'en' ? place.desc_en  : lang === 'zh' ? place.desc_zh  : null) ?? place.description
 
@@ -41,6 +48,12 @@ export function InfoCard({ place, lang, customCategories = [], onClose }: InfoCa
               >
                 {cat.label[lang]}
               </span>
+              {subLabel && (
+                <span className="text-xs px-2 py-0.5 rounded-full border font-medium"
+                  style={{ borderColor: `${cat.color}40`, color: `${cat.color}CC`, background: `${cat.color}10` }}>
+                  {subLabel}
+                </span>
+              )}
               {place.is_featured && (
                 <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-semibold">
                   ★ {t.featured}

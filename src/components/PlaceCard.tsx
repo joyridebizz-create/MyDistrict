@@ -1,18 +1,21 @@
 import { getCatConfig } from '../types/place'
 import { navigate } from '../lib/navigate'
-import type { Place, Lang, CustomCategory } from '../types/place'
+import type { Place, Lang, CustomCategory, SubCategory } from '../types/place'
 import { I18N } from '../types/place'
 
 interface PlaceCardProps {
   place: Place
   lang: Lang
   customCategories?: CustomCategory[]
+  subcategories?:    SubCategory[]
   onClick?: () => void
 }
 
-export function PlaceCard({ place, lang, customCategories = [], onClick }: PlaceCardProps) {
+export function PlaceCard({ place, lang, customCategories = [], subcategories = [], onClick }: PlaceCardProps) {
   const t   = I18N[lang]
   const cat = getCatConfig(place.category, customCategories)
+  const sub = place.subcategory ? subcategories.find(s => s.id === place.subcategory) : null
+  const subLabel = sub ? ((lang === 'en' ? sub.label_en : lang === 'zh' ? sub.label_zh : null) ?? sub.label_th) : null
   const name = (lang === 'en' ? place.name_en : lang === 'zh' ? place.name_zh : null) ?? place.name
   const desc = (lang === 'en' ? place.desc_en  : lang === 'zh' ? place.desc_zh  : null) ?? place.description
 
@@ -46,6 +49,12 @@ export function PlaceCard({ place, lang, customCategories = [], onClick }: Place
             <span className="text-amber-500 text-xs font-bold flex-shrink-0">★ {place.rating.toFixed(1)}</span>
           )}
         </div>
+        {subLabel && (
+          <span className="inline-block text-xs px-2 py-0.5 rounded-full mb-1 font-medium"
+            style={{ background: `${cat.color}18`, color: cat.color }}>
+            {subLabel}
+          </span>
+        )}
 
         {desc && (
           <p className="text-xs text-gray-500 line-clamp-2 mb-2">{desc}</p>
