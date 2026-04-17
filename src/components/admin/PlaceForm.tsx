@@ -233,6 +233,52 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
         </div>
       </div>
 
+      {/* ── Quick fields: price + rating (always visible) ── */}
+      <div className="px-4 pb-3 grid grid-cols-2 gap-3">
+        <div>
+          <div className={LABEL}>ราคา / ค่าเข้า</div>
+          <input
+            className={INPUT}
+            value={data.price_range}
+            onChange={e => set('price_range', e.target.value)}
+            placeholder="฿100/คน หรือ ฟรี"
+          />
+        </div>
+        <div>
+          <div className={LABEL}>
+            คะแนน &nbsp;
+            <span className="text-yellow-400 font-bold">
+              {data.rating > 0 ? `★ ${data.rating}` : '—'}
+            </span>
+          </div>
+          <div className="flex items-center gap-0.5 pt-1">
+            {[1, 2, 3, 4, 5].map(star => {
+              const filled = star <= Math.round(data.rating)
+              return (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => set('rating', data.rating === star ? 0 : star)}
+                  className="text-2xl leading-none transition-transform active:scale-90 focus:outline-none select-none"
+                  style={{ color: filled ? '#FACC15' : '#4B5563' }}
+                >
+                  ★
+                </button>
+              )
+            })}
+            {data.rating > 0 && (
+              <button
+                type="button"
+                onClick={() => set('rating', 0)}
+                className="ml-1 text-xs text-gray-600 hover:text-red-400 transition-colors"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* ── Tab bar ── */}
       <div className="flex px-4 border-b border-white/5 gap-1">
         {TABS.map(t => (
@@ -337,34 +383,6 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, customCategorie
         {/* TAB: ข้อมูลทั่วไป */}
         {tab === 'info' && (
           <>
-            <Field label="ราคา / ค่าเข้า">
-              <input className={INPUT} value={data.price_range} onChange={e => set('price_range', e.target.value)} placeholder="เช่น ฿ 100/คน หรือ ฟรี" />
-            </Field>
-
-            <Field label="คะแนน (0 = ยังไม่มีคะแนน)">
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => set('rating', data.rating === star ? 0 : star)}
-                    className="text-3xl leading-none transition-transform hover:scale-110 focus:outline-none"
-                    style={{ color: star <= data.rating ? '#FACC15' : '#374151' }}
-                  >
-                    ★
-                  </button>
-                ))}
-                <span className="ml-2 text-sm text-gray-400 min-w-[3rem]">
-                  {data.rating > 0 ? `${data.rating}.0` : '—'}
-                </span>
-                {data.rating > 0 && (
-                  <button type="button" onClick={() => set('rating', 0)}
-                    className="text-xs text-gray-500 hover:text-red-400 transition-colors ml-1">
-                    ล้าง
-                  </button>
-                )}
-              </div>
-            </Field>
             <Field label="เบอร์โทรศัพท์">
               <input className={INPUT} type="tel" value={data.phone} onChange={e => set('phone', e.target.value)} placeholder="044-XXXXXX" />
             </Field>
