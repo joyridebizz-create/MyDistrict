@@ -14,7 +14,7 @@
 
 ```
 Frontend : Vite + React + TypeScript + Tailwind CSS
-Map      : Leaflet.js + CARTO tiles
+Map      : Leaflet.js + CARTO tiles + supercluster (คลัสเตอร์ + spiderfy บน React overlay)
 Backend  : Supabase (PostgreSQL + RLS + Realtime + Storage)
 Deploy   : Vercel
 Auth     : Supabase Auth
@@ -205,6 +205,21 @@ src/
 
 ---
 
+## ✅ สิ่งที่ทำเสร็จแล้ว — Session วันที่ 18 เม.ย. 2026
+
+### 🗺️ Marker Clustering + Spiderfy (แผนที่ public)
+```
+[x] npm: supercluster + dev @types/supercluster
+[x] DistrictMap: สร้างดัชนี GeoJSON Point จาก places → Supercluster.load()
+[x] ทุกครั้งที่ move/zoom: getClusters(bbox, floor(zoom)) แทนการวาดหมุดทุกจุด
+[x] แสดงฟองคลัสเตอร์ (ตัวเลขจำนวน) เมื่อหลายจุดรวมกลุ่ม; zoom เข้าแยกตามพฤติกรรมของ supercluster
+[x] คลิกฟองคลัสเตอร์ → spiderfy: getLeaves(clusterId) จัดหมุดเป็นวงกลมรอบจุดศูนย์กลาง (พิกัดหน้าจอ)
+[x] หมุดเดี่ยวจาก getClusters ยังใช้กฎเดิม visible เมื่อ zoom >= 12; คลัสเตอร์โผล่ได้แม้ zoom ต่ำกว่า (ลดความแออัด)
+[x] ปิด spiderfy: คลิกแผนที่ (Leaflet), zoomstart, หรือเมื่อ places เปลี่ยน
+```
+
+---
+
 ## ✅ สิ่งที่ทำเสร็จแล้ว — Session วันที่ 17 เม.ย. 2026
 
 ### 🐛 Bug Fixes
@@ -272,6 +287,16 @@ src/
 
 ---
 
+## 📝 ไฟล์ที่ถูกสร้าง/แก้ไข — Session วันที่ 18 เม.ย. 2026
+
+```
+package.json              ← dependencies: supercluster; devDependencies: @types/supercluster
+package-lock.json         ← lock ตามด้านบน
+src/components/DistrictMap.tsx ← clustering + ฟองคลัสเตอร์ + spiderfy overlay (IsoPin เดิม)
+```
+
+---
+
 ## 📝 ไฟล์ที่ถูกสร้าง/แก้ไข — Session วันที่ 17 เม.ย. 2026
 
 ### ไฟล์ใหม่
@@ -320,10 +345,22 @@ src/pages/admin/AdminPage.tsx            ← + useCategories, useSubcategories
 
 ## 🗺️ Map Architecture
 
+### Clustering (supercluster)
+```typescript
+// src/components/DistrictMap.tsx
+// - ไม่ใช้ L.markercluster plugin — ยังเป็น React overlay + IsoPin
+new Supercluster({ radius: 72, maxZoom: 16, minZoom: 0, minPoints: 2 })
+index.load(places → GeoJSON Point + properties.id)
+getClusters([west,south,east,north], Math.floor(mapZoom))
+
+// Spiderfy: คลิก cluster → getLeaves(clusterId, LEAF_LIMIT) วางมุมมองเป็นวงกลมรอบ center
+// LEAF_LIMIT = 500 (ถ้ามีสถานที่ในคลัสเตอร์เดียวมากกว่านี้ต้องขยายหรือแยก UX)
+```
+
 ### ISO Pin Overlay
 ```typescript
 scale = Math.pow(2, zoom - 15) * 0.85
-visible = zoom >= 12
+visible = zoom >= 12   // เฉพาะหมุดเดี่ยวจาก getClusters; ฟองคลัสเตอร์ไม่ใช้กฎนี้
 
 // IsoPin accepts string category:
 // - built-in ('tour','stay','food','cafe','car') → SVG building
@@ -407,6 +444,9 @@ AI Auto-translate (MyMemory API):
 
 ### Priority กลาง
 ```
+[ ] แผนที่: จูนค่า clustering (radius, maxZoom, MIN_PIN_ZOOM) ตามการใช้งานจริง
+[ ] แผนที่: ถ้าคลัสเตอร์เดียวมีมากกว่า LEAF_LIMIT (500) — เพิ่ม limit หรือแสดงข้อความ/แบ่งหน้า
+
 [ ] Rating system จริง
     - ตาราง place_reviews (user_id, place_id, rating, comment)
     - คำนวณ avg rating (trigger หรือ view)
@@ -443,6 +483,12 @@ AI Auto-translate (MyMemory API):
 ## 🐛 ปัญหาที่ยังไม่ได้แก้
 
 ```
+⚠️  Clustering เป็น custom (supercluster + React) ไม่ใช่ Leaflet.markercluster
+    → พฤติกรรมใกล้เคียง แต่ไม่เหมือน plugin 100% (เช่น animation การแตกคลัสเตอร์แบบ native)
+
+⚠️  Spiderfy จำกัดที่ LEAF_LIMIT = 500 จุดต่อคลัสเตอร์
+    → โหนดที่มีสถานที่หนาแน่นมากอาจต้องเพิ่มค่าหรือออกแบบ UX อื่น
+
 ⚠️  Image deletion จาก Storage
     → เมื่อเปลี่ยนรูป ไฟล์เก่าใน Storage ไม่ถูกลบ (สะสม)
     → Fix: ลบไฟล์เก่าก่อน upload ใหม่ใน ImageUploader
@@ -509,6 +555,7 @@ npm run dev
 ✅ RLS: public read is_active=true เสมอ
 ✅ CARTO tiles (ไม่ใช้ OSM ตรง — block file://)
 ✅ ISO pin ใช้ React state positions (ไม่ใช้ imperative DOM)
+✅ แผนที่: คลัสเตอร์จาก Supercluster + state (ไม่ใช้ L.markercluster DOM)
 ✅ Stale closure: map event listeners ต้องใช้ ref เสมอ
 ✅ Mock fallback: isSupabaseConfigured() → ใช้ pimai-mock.ts
 ✅ i18n keys: th / en / zh ทุก text ที่ user เห็น
