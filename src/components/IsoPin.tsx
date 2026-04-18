@@ -206,6 +206,52 @@ function EmojiPin({ icon, color }: { icon: string; color: string }) {
   )
 }
 
+/** แสดงภาพ custom building ที่ admin อัพโหลด — เต็มพื้นที่ pin */
+function CustomImagePin({ url, color }: { url: string; color: string }) {
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {/* shadow ellipse */}
+      <div style={{
+        position: 'absolute',
+        bottom: '1%',
+        left: '12%', right: '12%',
+        height: '7%',
+        borderRadius: '50%',
+        background: 'rgba(0,0,0,0.18)',
+        filter: 'blur(2px)',
+      }} />
+      {/* building image */}
+      <img
+        src={url}
+        alt=""
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          bottom: '8%',
+          width: '100%',
+          height: '92%',
+          objectFit: 'contain',
+          filter: `drop-shadow(0 3px 6px rgba(0,0,0,0.4))`,
+        }}
+        onError={e => {
+          // fallback: ซ่อนรูปถ้าโหลดไม่ได้
+          ;(e.currentTarget as HTMLImageElement).style.opacity = '0'
+        }}
+      />
+      {/* color accent bar ด้านล่างอาคาร */}
+      <div style={{
+        position: 'absolute',
+        bottom: '7%',
+        left: '20%', right: '20%',
+        height: 2,
+        borderRadius: 1,
+        background: color,
+        opacity: 0.7,
+      }} />
+    </div>
+  )
+}
+
 export function IsoPin({ category, catConfig, featured = false, selected = false, scale = 1, onClick }: IsoPinProps) {
   const builtIn = SVG_MAP[category as Category]
   const SvgComponent = builtIn ?? null
@@ -230,10 +276,12 @@ export function IsoPin({ category, catConfig, featured = false, selected = false
     >
       {SvgComponent
         ? <SvgComponent />
-        : <EmojiPin
-            icon={catConfig?.icon ?? '📍'}
-            color={catConfig?.color ?? '#6366F1'}
-          />
+        : catConfig?.icon_url
+          ? <CustomImagePin url={catConfig.icon_url} color={catConfig?.color ?? '#6366F1'} />
+          : <EmojiPin
+              icon={catConfig?.icon ?? '📍'}
+              color={catConfig?.color ?? '#6366F1'}
+            />
       }
       {featured && (
         <div

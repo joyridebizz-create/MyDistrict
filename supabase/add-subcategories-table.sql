@@ -25,6 +25,9 @@ create index if not exists subcategories_node_parent_idx
 -- 3. RLS
 alter table subcategories enable row level security;
 
+drop policy if exists "subcategories_public_read" on subcategories;
+drop policy if exists "subcategories_admin_all"   on subcategories;
+
 create policy "subcategories_public_read" on subcategories
   for select using (is_active = true);
 

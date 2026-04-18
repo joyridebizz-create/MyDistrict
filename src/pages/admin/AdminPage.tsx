@@ -9,6 +9,7 @@ import { useSubcategories }  from '../../hooks/useSubcategories'
 import { PIMAI_NODE }       from '../../data/pimai-mock'
 import { AdminMapPicker }   from '../../components/admin/AdminMapPicker'
 import { PlaceForm }        from '../../components/admin/PlaceForm'
+import { ImageUploader }    from '../../components/admin/ImageUploader'
 import type { PlaceFormData } from '../../components/admin/PlaceForm'
 import type { Place } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig, ICON_OPTIONS, COLOR_OPTIONS } from '../../types/place'
@@ -148,7 +149,7 @@ export function AdminPage() {
   const [search, setSearch]         = useState('')
   const [filterCat, setFilterCat]   = useState<string>('all')
   /* category form state */
-  const [catForm, setCatForm]         = useState({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1' })
+  const [catForm, setCatForm]         = useState({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1', icon_url: '' })
   const [catSaving, setCatSaving]     = useState(false)
   const [showCatForm, setShowCatForm] = useState(false)
   /* subcategory form state */
@@ -718,10 +719,22 @@ export function AdminPage() {
                     <div className="space-y-1.5">
                       {customCategories.map(c => (
                         <div key={c.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/8">
-                          <span className="text-lg">{c.icon}</span>
+                          {/* Icon preview: building image or emoji */}
+                          <div
+                            className="w-10 h-12 flex-none rounded-lg overflow-hidden flex items-center justify-center"
+                            style={{ background: `${c.color}15` }}
+                          >
+                            {c.icon_url
+                              ? <img src={c.icon_url} alt="" className="w-full h-full object-contain p-0.5" />
+                              : <span className="text-xl">{c.icon}</span>
+                            }
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-white font-medium">{c.label_th}</div>
                             <div className="text-xs text-gray-500 font-mono">{c.id}</div>
+                            {c.icon_url && (
+                              <div className="text-[10px] text-green-500 mt-0.5">✓ มีภาพ building</div>
+                            )}
                           </div>
                           <div className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0"
                             style={{ background: c.color }} />
@@ -816,6 +829,58 @@ export function AdminPage() {
                       </div>
                     </div>
 
+                    {/* Building icon image upload */}
+                    <div className="border-t border-white/5 pt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-semibold text-gray-400">
+                          ภาพ Isometric Building <span className="text-gray-600 font-normal">(ไม่บังคับ)</span>
+                        </label>
+                        {catForm.icon_url && (
+                          <button
+                            type="button"
+                            onClick={() => setCatForm(f => ({ ...f, icon_url: '' }))}
+                            className="text-xs text-red-400 hover:text-red-300"
+                          >
+                            ✕ ลบออก
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Preview + upload side-by-side */}
+                      <div className="flex gap-3 items-start">
+                        {/* Preview pin */}
+                        <div className="flex-none flex flex-col items-center gap-1">
+                          <div
+                            className="w-14 h-[70px] rounded-lg overflow-hidden flex items-center justify-center"
+                            style={{ background: `${catForm.color}12`, border: `1px solid ${catForm.color}30` }}
+                          >
+                            {catForm.icon_url
+                              ? <img src={catForm.icon_url} alt="preview" className="w-full h-full object-contain p-0.5" />
+                              : <span className="text-2xl opacity-50">{catForm.icon}</span>
+                            }
+                          </div>
+                          <span className="text-[10px] text-gray-600">Preview</span>
+                        </div>
+
+                        {/* Uploader */}
+                        <div className="flex-1 min-w-0">
+                          <ImageUploader
+                            value={catForm.icon_url}
+                            onChange={url => setCatForm(f => ({ ...f, icon_url: url }))}
+                            nodeId={nodeId}
+                            label=""
+                            placeholder="https://...building.png"
+                            thumbnail
+                          />
+                        </div>
+                      </div>
+
+                      <p className="mt-1.5 text-[10px] text-gray-600 leading-relaxed">
+                        อัพโหลดภาพ Isometric building (PNG/WebP พื้นหลังโปร่งใส) ขนาดแนะนำ 128×160px
+                        — ถ้าไม่อัพโหลด จะใช้ไอคอน emoji แทน
+                      </p>
+                    </div>
+
                     <button
                       disabled={!catForm.id.trim() || !catForm.label_th.trim() || catSaving}
                       onClick={async () => {
@@ -827,6 +892,7 @@ export function AdminPage() {
                           label_en:   catForm.label_en.trim() || null,
                           label_zh:   catForm.label_zh.trim() || null,
                           icon:       catForm.icon,
+                          icon_url:   catForm.icon_url.trim() || null,
                           color:      catForm.color,
                           sort_order: 99,
                           is_active:  true,
@@ -835,7 +901,7 @@ export function AdminPage() {
                         if (err) showToast('เพิ่มไม่สำเร็จ: ' + err.message, false)
                         else {
                           showToast(`เพิ่มหมวดหมู่ "${catForm.label_th}" แล้ว ✓`)
-                          setCatForm({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1' })
+                          setCatForm({ id: '', label_th: '', label_en: '', label_zh: '', icon: '📍', color: '#6366F1', icon_url: '' })
                           setShowCatForm(false)
                         }
                       }}

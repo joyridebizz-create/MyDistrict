@@ -41,7 +41,8 @@ export interface CustomCategory {
   label_th: string
   label_en: string | null
   label_zh: string | null
-  icon: string         // emoji
+  icon: string         // emoji fallback
+  icon_url: string | null  // custom building image URL (PNG/WebP)
   color: string        // hex
   sort_order: number
   is_active: boolean
@@ -60,7 +61,7 @@ export interface SubCategory {
   created_at: string
 }
 
-export type CatConfig = { icon: string; color: string; label: Record<Lang, string> }
+export type CatConfig = { icon: string; color: string; label: Record<Lang, string>; icon_url?: string | null }
 
 export type Lang = 'th' | 'en' | 'zh'
 
@@ -101,8 +102,9 @@ export function getCatConfig(
   if (category in CAT_CONFIG) return CAT_CONFIG[category as Category]
   const custom = customCategories.find(c => c.id === category)
   if (custom) return {
-    icon:  custom.icon,
-    color: custom.color,
+    icon:     custom.icon,
+    icon_url: custom.icon_url ?? null,
+    color:    custom.color,
     label: {
       th: custom.label_th,
       en: custom.label_en ?? custom.label_th,
