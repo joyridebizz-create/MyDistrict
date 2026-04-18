@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { removeStorageFileByPublicUrl } from '../lib/supabaseStorage'
 import type { SidebarAd, SidebarAdKind } from '../types/sidebarAd'
 
 export type SidebarAdInsert = {
@@ -54,6 +55,23 @@ export function useSidebarAds(nodeId: string, opts?: { admin?: boolean }) {
   }
 
   async function updateAd(id: string, patch: Partial<SidebarAd>) {
+    if (Object.prototype.hasOwnProperty.call(patch, 'media_url')) {
+      const { data: prev } = await supabase
+        .from('sidebar_ads')
+        .select('media_url')
+        .eq('id', id)
+        .eq('node_id', nodeId)
+        .maybeSingle()
+      const oldUrl = prev?.media_url?.trim()
+      const newUrl = patch.media_url?.trim() ?? null
+      if (oldUrl && oldUrl !== newUrl) {
+        const r = await removeStorageFileByPublicUrl(supabase, oldUrl)
+        if (!r.ok && r.reason === 'error' && r.message) {
+          console.warn('[sidebar_ads] ลบไฟล์เก่าใน Storage ไม่สำเร็จ:', r.message)
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('sidebar_ads')
       .update(patch)
@@ -64,6 +82,20 @@ export function useSidebarAds(nodeId: string, opts?: { admin?: boolean }) {
   }
 
   async function deleteAd(id: string) {
+    const { data: row } = await supabase
+      .from('sidebar_ads')
+      .select('media_url')
+      .eq('id', id)
+      .eq('node_id', nodeId)
+      .maybeSingle()
+
+    if (row?.media_url?.trim()) {
+      const r = await removeStorageFileByPublicUrl(supabase, row.media_url.trim())
+      if (!r.ok && r.reason === 'error' && r.message) {
+        console.warn('[sidebar_ads] ลบไฟล์ใน Storage ไม่สำเร็จ:', r.message)
+      }
+    }
+
     const { error } = await supabase
       .from('sidebar_ads')
       .delete()
