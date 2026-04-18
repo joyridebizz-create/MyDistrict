@@ -8,6 +8,8 @@ import { usePlaces }      from '../hooks/usePlaces'
 import { useNode }        from '../hooks/useNode'
 import { useCategories }    from '../hooks/useCategories'
 import { useSubcategories }  from '../hooks/useSubcategories'
+import { useSidebarAds }     from '../hooks/useSidebarAds'
+import { SidebarAdSlider }   from '../components/SidebarAdSlider'
 import { PIMAI_NODE }     from '../data/pimai-mock'
 import type { Lang, Place } from '../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig, I18N } from '../types/place'
@@ -25,6 +27,7 @@ export function NodePage() {
   const { places: allPlaces, loading: placesLoading } = usePlaces(nodeId)
   const { categories: customCategories }         = useCategories(nodeId)
   const { subcategories }                        = useSubcategories(nodeId)
+  const { ads: sidebarAds }                      = useSidebarAds(nodeId)
 
   const activeNode = node ?? PIMAI_NODE  // PIMAI_NODE only used while loading
   const t = I18N[lang]
@@ -68,7 +71,7 @@ export function NodePage() {
         </div>
 
         {/* Category filters */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2">
+        <nav className="flex-1 min-h-0 overflow-y-auto py-2 px-2">
           {/* All */}
           <button
             onClick={() => setCategory('all')}
@@ -131,8 +134,15 @@ export function NodePage() {
           })}
         </nav>
 
+        {/* Sidebar ads carousel */}
+        {sidebarAds.length > 0 && (
+          <div className="flex-shrink-0 border-t border-white/5 pt-2">
+            <SidebarAdSlider ads={sidebarAds} />
+          </div>
+        )}
+
         {/* Bottom: view toggle */}
-        <div className="px-3 pb-4 pt-2 border-t border-white/5">
+        <div className="flex-shrink-0 px-3 pb-4 pt-2 border-t border-white/5">
           <div className="flex rounded-lg overflow-hidden border border-white/10 text-xs">
             <button
               onClick={() => setView('map')}

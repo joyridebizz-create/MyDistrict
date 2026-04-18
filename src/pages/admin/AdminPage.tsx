@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase }         from '../../lib/supabase'
 import { useAuth }          from '../../hooks/useAuth'
@@ -6,6 +6,7 @@ import { usePlaces }        from '../../hooks/usePlaces'
 import { useNode }          from '../../hooks/useNode'
 import { useCategories }     from '../../hooks/useCategories'
 import { useSubcategories }  from '../../hooks/useSubcategories'
+import { useSidebarAds }     from '../../hooks/useSidebarAds'
 import { PIMAI_NODE }       from '../../data/pimai-mock'
 import { AdminMapPicker }   from '../../components/admin/AdminMapPicker'
 import { PlaceForm }        from '../../components/admin/PlaceForm'
@@ -14,6 +15,8 @@ import type { PlaceFormData } from '../../components/admin/PlaceForm'
 import type { Place } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig, ICON_OPTIONS, COLOR_OPTIONS } from '../../types/place'
 import type { CustomCategory } from '../../types/place'
+import type { SidebarAd, SidebarAdKind } from '../../types/sidebarAd'
+import { SidebarAdSlider } from '../../components/SidebarAdSlider'
 
 type Tab = 'dashboard' | 'places' | 'map' | 'settings'
 
@@ -128,6 +131,274 @@ function PlaceRow({
   )
 }
 
+type AdFormState = {
+  kind: SidebarAdKind
+  title: string
+  body: string
+  media_url: string
+  duration_seconds: number
+}
+
+/* ─────────────────────────────────────────────
+   Sidebar ads admin (Settings)
+───────────────────────────────────────────── */
+function SidebarAdsAdminSection({
+  nodeId,
+  INPUT,
+  ads,
+  adForm,
+  setAdForm,
+  adSaving,
+  setAdSaving,
+  showAdForm,
+  setShowAdForm,
+  addAd,
+  updateAd,
+  deleteAd,
+  showToast,
+}: {
+  nodeId: string
+  INPUT: string
+  ads: SidebarAd[]
+  adForm: AdFormState
+  setAdForm: Dispatch<SetStateAction<AdFormState>>
+  adSaving: boolean
+  setAdSaving: (v: boolean) => void
+  showAdForm: boolean
+  setShowAdForm: Dispatch<SetStateAction<boolean>>
+  addAd: (row: import('../../hooks/useSidebarAds').SidebarAdInsert) => Promise<{ message: string } | null>
+  updateAd: (id: string, patch: Partial<SidebarAd>) => Promise<{ message: string } | null>
+  deleteAd: (id: string) => Promise<{ message: string } | null>
+  showToast: (msg: string, ok?: boolean) => void
+}) {
+  const videoFileRef = useRef<HTMLInputElement>(null)
+
+  async function uploadVideo(file: File) {
+    const ext = file.name.split('.').pop()?.toLowerCase() === 'webm' ? 'webm' : 'mp4'
+    const path = `${nodeId}/sidebar-ads/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage.from('place-images').upload(path, file, {
+      contentType: file.type || `video/${ext}`,
+      upsert: false,
+    })
+    if (error) throw new Error(error.message)
+    const { data } = supabase.storage.from('place-images').getPublicUrl(path)
+    return data.publicUrl
+  }
+
+  return (
+    <div className="bg-[#1a1d2b] rounded-2xl border border-white/5 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="text-white font-bold text-sm">โฆษณา Sidebar</h2>
+          <p className="text-gray-500 text-xs mt-0.5">แสดงใต้เมนูหมวดหมู่ — สไลด์อัตโนมัติ + ลากซ้าย/ขวา</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAdForm(v => !v)}
+          className="text-xs px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition-colors font-semibold"
+        >
+          {showAdForm ? 'ยกเลิก' : '+ เพิ่มโฆษณา'}
+        </button>
+      </div>
+
+      {/* Preview (same component as public) */}
+      {ads.filter(a => a.is_active).length > 0 && (
+        <div className="mb-4 p-3 rounded-xl bg-black/20 border border-white/8">
+          <div className="text-[10px] text-gray-500 mb-2 font-semibold uppercase tracking-wider">ตัวอย่าง (เฉพาะที่เปิดใช้)</div>
+          <div className="max-w-[208px] mx-auto border border-white/10 rounded-xl overflow-hidden">
+            <SidebarAdSlider ads={ads.filter(a => a.is_active)} />
+          </div>
+        </div>
+      )}
+
+      {/* List */}
+      {ads.length > 0 && (
+        <div className="space-y-2 mb-4">
+          {ads.map(ad => (
+            <div
+              key={ad.id}
+              className="flex items-start gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/8 text-xs"
+            >
+              <span className="text-[10px] font-mono uppercase text-gray-500 w-12 flex-shrink-0 pt-0.5">{ad.kind}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-gray-300 truncate">{ad.title || ad.body || ad.media_url || '—'}</div>
+                <div className="text-gray-600 text-[10px] mt-0.5">{ad.duration_seconds}s / สไลด์</div>
+              </div>
+              <button
+                type="button"
+                title={ad.is_active ? 'ปิดการแสดง' : 'เปิดการแสดง'}
+                onClick={async () => {
+                  const err = await updateAd(ad.id, { is_active: !ad.is_active })
+                  if (err) showToast('อัปเดตไม่สำเร็จ: ' + err.message, false)
+                  else showToast(ad.is_active ? 'ปิดโฆษณาแล้ว' : 'เปิดโฆษณาแล้ว')
+                }}
+                className={`flex-shrink-0 text-[10px] px-2 py-1 rounded-lg font-semibold transition-colors ${
+                  ad.is_active ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-500'
+                }`}
+              >
+                {ad.is_active ? 'เปิด' : 'ปิด'}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!confirm('ลบโฆษณานี้?')) return
+                  const err = await deleteAd(ad.id)
+                  if (err) showToast('ลบไม่สำเร็จ', false)
+                  else showToast('ลบแล้ว')
+                }}
+                className="text-gray-600 hover:text-red-400 px-1"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showAdForm && (
+        <div className="border-t border-white/5 pt-4 space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1">ประเภท</label>
+            <select
+              className={INPUT}
+              value={adForm.kind}
+              onChange={e =>
+                setAdForm(f => ({ ...f, kind: e.target.value as SidebarAdKind, media_url: '' }))
+              }
+            >
+              <option value="text">ข้อความอย่างเดียว</option>
+              <option value="image">รูปภาพ</option>
+              <option value="video">วิดีโอสั้น</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1">หัวข้อ (ไม่บังคับ)</label>
+            <input
+              className={INPUT}
+              value={adForm.title}
+              onChange={e => setAdForm(f => ({ ...f, title: e.target.value }))}
+              placeholder="หัวข้อโฆษณา"
+            />
+          </div>
+          {adForm.kind === 'text' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 mb-1">เนื้อหา</label>
+              <textarea
+                className={`${INPUT} min-h-[72px] resize-y`}
+                value={adForm.body}
+                onChange={e => setAdForm(f => ({ ...f, body: e.target.value }))}
+                placeholder="ข้อความที่ต้องการแสดง"
+              />
+            </div>
+          )}
+          {adForm.kind === 'image' && (
+            <div>
+              <ImageUploader
+                value={adForm.media_url}
+                onChange={url => setAdForm(f => ({ ...f, media_url: url }))}
+                nodeId={nodeId}
+                label="รูปโฆษณา"
+                thumbnail
+              />
+            </div>
+          )}
+          {adForm.kind === 'video' && (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-400">วิดีโอ — URL หรืออัพโหลด MP4/WebM</label>
+              <input
+                type="url"
+                className={INPUT}
+                value={adForm.media_url}
+                onChange={e => setAdForm(f => ({ ...f, media_url: e.target.value }))}
+                placeholder="https://.../clip.mp4"
+              />
+              <input ref={videoFileRef} type="file" accept="video/mp4,video/webm" className="hidden"
+                onChange={async e => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (!file) return
+                  setAdSaving(true)
+                  try {
+                    const url = await uploadVideo(file)
+                    setAdForm(f => ({ ...f, media_url: url }))
+                    showToast('อัพโหลดวิดีโอแล้ว ✓')
+                  } catch (err) {
+                    showToast(
+                      'อัพโหลดไม่สำเร็จ: ' + (err instanceof Error ? err.message : '') +
+                        ' — ลองใส่ URL แทน หรือรัน SQL เพิ่ม video/mp4 ใน Storage',
+                      false
+                    )
+                  }
+                  setAdSaving(false)
+                }}
+              />
+              <button
+                type="button"
+                disabled={adSaving}
+                onClick={() => videoFileRef.current?.click()}
+                className="text-xs px-3 py-1.5 rounded-lg bg-white/8 hover:bg-white/12 text-gray-300"
+              >
+                📁 เลือกไฟล์วิดีโอ
+              </button>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1">
+              ระยะเวลาแสดงแต่ละสไลด์ (วินาที): {adForm.duration_seconds}
+            </label>
+            <input
+              type="range"
+              min={2}
+              max={60}
+              value={adForm.duration_seconds}
+              onChange={e => setAdForm(f => ({ ...f, duration_seconds: +e.target.value }))}
+              className="w-full accent-violet-500"
+            />
+            <div className="flex justify-between text-[10px] text-gray-600">
+              <span>2 วิ</span><span>60 วิ</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={adSaving}
+            onClick={async () => {
+              if (adForm.kind === 'text' && !adForm.title.trim() && !adForm.body.trim()) {
+                showToast('ใส่หัวข้อหรือเนื้อหา', false)
+                return
+              }
+              if ((adForm.kind === 'image' || adForm.kind === 'video') && !adForm.media_url.trim()) {
+                showToast('ต้องมีรูปหรือวิดีโอ', false)
+                return
+              }
+              setAdSaving(true)
+              const err = await addAd({
+                kind:             adForm.kind,
+                title:            adForm.title.trim() || null,
+                body:             adForm.kind === 'text' ? adForm.body.trim() || null : null,
+                media_url:        adForm.kind !== 'text' ? adForm.media_url.trim() || null : null,
+                duration_seconds: adForm.duration_seconds,
+                is_active:        true,
+              })
+              setAdSaving(false)
+              if (err) showToast('บันทึกไม่สำเร็จ: ' + err.message, false)
+              else {
+                showToast('เพิ่มโฆษณาแล้ว ✓')
+                setAdForm({ kind: 'text', title: '', body: '', media_url: '', duration_seconds: 5 })
+                setShowAdForm(false)
+              }
+            }}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-40"
+          >
+            {adSaving ? 'กำลังบันทึก...' : '+ บันทึกโฆษณา'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─────────────────────────────────────────────
    Main AdminPage
 ───────────────────────────────────────────── */
@@ -139,6 +410,7 @@ export function AdminPage() {
   const { places, loading }                                              = usePlaces(nodeId)
   const { categories: customCategories, addCategory, deleteCategory }           = useCategories(nodeId)
   const { subcategories, byCategory: subcatByCategory, addSubcategory, deleteSubcategory } = useSubcategories(nodeId)
+  const { ads: sidebarAdsAdmin, addAd, updateAd, deleteAd }              = useSidebarAds(nodeId, { admin: true })
   const activeNode                                                       = node ?? PIMAI_NODE
 
   const [tab, setTab]               = useState<Tab>('dashboard')
@@ -156,6 +428,16 @@ export function AdminPage() {
   const [subcatForm, setSubcatForm]       = useState({ id: '', parent_category: 'food', label_th: '', label_en: '', label_zh: '' })
   const [subcatSaving, setSubcatSaving]   = useState(false)
   const [showSubcatForm, setShowSubcatForm] = useState<string | null>(null)
+  /* sidebar ads form */
+  const [adForm, setAdForm] = useState<{
+    kind: SidebarAdKind
+    title: string
+    body: string
+    media_url: string
+    duration_seconds: number
+  }>({ kind: 'text', title: '', body: '', media_url: '', duration_seconds: 5 })
+  const [adSaving, setAdSaving]     = useState(false)
+  const [showAdForm, setShowAdForm] = useState(false)
   /* danger zone state */
   const [dangerStep, setDangerStep]     = useState<'idle' | 'confirm' | 'verify'>('idle')
   const [dangerPassword, setDangerPassword] = useState('')
@@ -637,7 +919,7 @@ export function AdminPage() {
         {/* ── SETTINGS ── */}
         {tab === 'settings' && (
           <div className="h-full overflow-y-auto p-6">
-            <div className="max-w-lg mx-auto space-y-6">
+            <div className="max-w-2xl mx-auto space-y-6">
               <div className="bg-[#1a1d2b] rounded-2xl border border-white/5 p-5">
                 <h2 className="text-white font-bold text-sm mb-4">Node Settings</h2>
                 <div className="space-y-4">
@@ -682,6 +964,23 @@ export function AdminPage() {
                   </button>
                 </div>
               </div>
+
+              {/* ── Sidebar Ads (carousel) ── */}
+              <SidebarAdsAdminSection
+                nodeId={nodeId}
+                INPUT={INPUT}
+                ads={sidebarAdsAdmin}
+                adForm={adForm}
+                setAdForm={setAdForm}
+                adSaving={adSaving}
+                setAdSaving={setAdSaving}
+                showAdForm={showAdForm}
+                setShowAdForm={setShowAdForm}
+                addAd={addAd}
+                updateAd={updateAd}
+                deleteAd={deleteAd}
+                showToast={showToast}
+              />
 
               {/* ── Categories Manager ── */}
               <div className="bg-[#1a1d2b] rounded-2xl border border-white/5 p-5">

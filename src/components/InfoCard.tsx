@@ -31,7 +31,6 @@ export function InfoCard({ place, lang, customCategories = [], subcategories = [
     ...(place.images ?? []),
   ].filter(Boolean).slice(0, 5)
 
-  const hasGallery = allImages.length > 1
   const [activeIdx, setActiveIdx] = useState(0)
 
   return (
