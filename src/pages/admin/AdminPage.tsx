@@ -201,6 +201,28 @@ function SidebarAdsAdminSection({
         </button>
       </div>
 
+      {/* หมายเหตุ: ขนาดที่แนะนำ (ไม่ให้ลืมตอนออกแบบ) */}
+      <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/5 px-3 py-2.5 text-[11px] leading-relaxed text-amber-100/90">
+        <div className="font-bold text-amber-200/95 mb-1 flex items-center gap-1.5">
+          <span aria-hidden>📐</span> หมายเหตุ — ขนาดที่แนะนำ
+        </div>
+        <ul className="list-disc list-inside space-y-1 text-gray-400">
+          <li>
+            <span className="text-gray-300">พื้นที่แสดงจริงใน Sidebar:</span> กว้าง ~190–208px × สูง 88px (แบนเนอร์แนวนอน)
+          </li>
+          <li>
+            <span className="text-gray-300">รูป:</span> ออกแบบ ~<span className="font-mono text-gray-300">800×350</span> หรือ{' '}
+            <span className="font-mono text-gray-300">640×280</span> px (อัตราส่วน ~2.3:1) — วางข้อความ/โลโก้ใกล้กลางภาพเพื่อลดการถูก crop
+          </li>
+          <li>
+            <span className="text-gray-300">วิดีโอ:</span> ความละเอียด <span className="font-mono text-gray-300">480p</span> แนวนอน (เช่น 640×360) ก็พอ — ไฟล์ไม่เกิน ~20MB ตาม Storage
+          </li>
+          <li>
+            <span className="text-gray-300">ข้อความ:</span> เขียนสั้น ๆ (หัวข้อ ~2 บรรทัด, เนื้อหา ~4 บรรทัดบนหน้าจอ)
+          </li>
+        </ul>
+      </div>
+
       {/* Preview (same component as public) */}
       {ads.filter(a => a.is_active).length > 0 && (
         <div className="mb-4 p-3 rounded-xl bg-black/20 border border-white/8">
