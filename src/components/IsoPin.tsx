@@ -3,6 +3,8 @@ import type { Category, CatConfig } from '../types/place'
 interface IsoPinProps {
   category:   string
   catConfig?: CatConfig        // config ของ custom category (ถ้ามี)
+  /** แทนที่ SVG หมวดหลักด้วยรูป (จาก nodes.iso_pin_icons) */
+  isoOverrideUrl?: string | null
   featured?:  boolean
   selected?:  boolean
   scale?:     number
@@ -252,9 +254,35 @@ function CustomImagePin({ url, color }: { url: string; color: string }) {
   )
 }
 
-export function IsoPin({ category, catConfig, featured = false, selected = false, scale = 1, onClick }: IsoPinProps) {
+export function IsoPin({
+  category,
+  catConfig,
+  isoOverrideUrl,
+  featured = false,
+  selected = false,
+  scale = 1,
+  onClick,
+}: IsoPinProps) {
   const builtIn = SVG_MAP[category as Category]
   const SvgComponent = builtIn ?? null
+  const color = catConfig?.color ?? '#6366F1'
+  const override = isoOverrideUrl?.trim()
+
+  let pinBody: JSX.Element
+  if (override) {
+    pinBody = <CustomImagePin url={override} color={color} />
+  } else if (SvgComponent) {
+    pinBody = <SvgComponent />
+  } else if (catConfig?.icon_url) {
+    pinBody = <CustomImagePin url={catConfig.icon_url} color={color} />
+  } else {
+    pinBody = (
+      <EmojiPin
+        icon={catConfig?.icon ?? '📍'}
+        color={color}
+      />
+    )
+  }
 
   return (
     <div
@@ -274,15 +302,7 @@ export function IsoPin({ category, catConfig, featured = false, selected = false
         transformOrigin: 'bottom center',
       }}
     >
-      {SvgComponent
-        ? <SvgComponent />
-        : catConfig?.icon_url
-          ? <CustomImagePin url={catConfig.icon_url} color={catConfig?.color ?? '#6366F1'} />
-          : <EmojiPin
-              icon={catConfig?.icon ?? '📍'}
-              color={catConfig?.color ?? '#6366F1'}
-            />
-      }
+      {pinBody}
       {featured && (
         <div
           style={{

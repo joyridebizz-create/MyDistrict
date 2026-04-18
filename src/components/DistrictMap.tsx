@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { IsoPin } from './IsoPin'
-import type { Place, Node, Lang, CustomCategory } from '../types/place'
-import { getCatConfig } from '../types/place'
+import type { Place, Node, Lang, CustomCategory, Category } from '../types/place'
+import { CATEGORIES, getCatConfig } from '../types/place'
 
 /* ── Tile layers (CARTO — works on file:// and production) ── */
 const TILE_URLS = {
@@ -153,6 +153,11 @@ export function DistrictMap({ node, places, lang = 'th', customCategories = [], 
               <IsoPin
                 category={place.category}
                 catConfig={cat}
+                isoOverrideUrl={
+                  CATEGORIES.includes(place.category as Category)
+                    ? node.iso_pin_icons?.[place.category as Category]?.trim() || undefined
+                    : undefined
+                }
                 featured={place.is_featured}
                 scale={pos.scale}
                 selected={isSelected}

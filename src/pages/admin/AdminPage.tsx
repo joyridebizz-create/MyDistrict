@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
+import { useState, useMemo, useRef, useEffect, type Dispatch, type SetStateAction } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase }         from '../../lib/supabase'
 import { useAuth }          from '../../hooks/useAuth'
@@ -12,11 +12,13 @@ import { AdminMapPicker }   from '../../components/admin/AdminMapPicker'
 import { PlaceForm }        from '../../components/admin/PlaceForm'
 import { ImageUploader }    from '../../components/admin/ImageUploader'
 import type { PlaceFormData } from '../../components/admin/PlaceForm'
-import type { Place } from '../../types/place'
+import type { Place, Category } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig, ICON_OPTIONS, COLOR_OPTIONS } from '../../types/place'
 import type { CustomCategory } from '../../types/place'
 import type { SidebarAd, SidebarAdKind } from '../../types/sidebarAd'
 import { SidebarAdSlider } from '../../components/SidebarAdSlider'
+import { IsoPin } from '../../components/IsoPin'
+import { removeStorageFileByPublicUrl } from '../../lib/supabaseStorage'
 
 type Tab = 'dashboard' | 'places' | 'map' | 'settings'
 
@@ -447,7 +449,7 @@ export function AdminPage() {
   const { nodeId = 'phimai' } = useParams<{ nodeId: string }>()
   const { user } = useAuth()
 
-  const { node }                                                         = useNode(nodeId)
+  const { node, refetch: refetchNode }                                   = useNode(nodeId)
   const { places, loading }                                              = usePlaces(nodeId)
   const { categories: customCategories, addCategory, deleteCategory }           = useCategories(nodeId)
   const { subcategories, byCategory: subcatByCategory, addSubcategory, deleteSubcategory } = useSubcategories(nodeId)
@@ -492,6 +494,26 @@ export function AdminPage() {
     province:     activeNode.province ?? '',
     default_zoom: activeNode.default_zoom,
   })
+  const [isoPinIcons, setIsoPinIcons] = useState<Partial<Record<Category, string>>>({})
+
+  useEffect(() => {
+    setIsoPinIcons({})
+  }, [nodeId])
+
+  useEffect(() => {
+    if (!node) return
+    setNodeForm({
+      name:         node.name,
+      province:     node.province ?? '',
+      default_zoom: node.default_zoom,
+    })
+    const icons = node.iso_pin_icons
+    if (icons && typeof icons === 'object' && !Array.isArray(icons)) {
+      setIsoPinIcons({ ...(icons as Partial<Record<Category, string>>) })
+    } else {
+      setIsoPinIcons({})
+    }
+  }, [node])
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok })
@@ -587,13 +609,34 @@ export function AdminPage() {
   }
 
   async function saveNodeSettings() {
+    const prev = (node?.iso_pin_icons ?? {}) as Partial<Record<Category, string>>
+    const cleaned: Partial<Record<Category, string>> = {}
+    for (const c of CATEGORIES) {
+      const v = isoPinIcons[c]?.trim()
+      if (v) cleaned[c] = v
+    }
+    for (const c of CATEGORIES) {
+      const oldU = prev[c]?.trim()
+      const newU = cleaned[c]?.trim()
+      if (oldU && oldU !== newU) {
+        const r = await removeStorageFileByPublicUrl(supabase, oldU)
+        if (!r.ok && r.reason === 'error' && r.message) {
+          console.warn('[iso_pin_icons] ลบไฟล์เก่า:', r.message)
+        }
+      }
+    }
+
     const { error } = await supabase.from('nodes').update({
-      name:         nodeForm.name.trim(),
-      province:     nodeForm.province.trim() || null,
-      default_zoom: nodeForm.default_zoom,
+      name:           nodeForm.name.trim(),
+      province:       nodeForm.province.trim() || null,
+      default_zoom:   nodeForm.default_zoom,
+      iso_pin_icons:  cleaned,
     }).eq('id', nodeId)
     if (error) showToast('บันทึกไม่สำเร็จ: ' + error.message, false)
-    else showToast('บันทึก Settings แล้ว ✓')
+    else {
+      showToast('บันทึก Settings แล้ว ✓')
+      await refetchNode()
+    }
   }
 
   function openAdd() {
@@ -947,6 +990,7 @@ export function AdminPage() {
                   nodeId={nodeId}
                   customCategories={customCategories}
                   subcategories={subcategories}
+                  isoPinIcons={isoPinIcons}
                   onSave={handleSave}
                   onDelete={editingPlace ? handleDelete : undefined}
                   onClose={closeForm}
@@ -999,6 +1043,44 @@ export function AdminPage() {
                     <div>Center lng: <span className="text-gray-300 font-mono">{activeNode.center_lng}</span></div>
                   </div>
                   <p className="text-gray-600 text-xs">เปลี่ยนจุดศูนย์กลางได้ที่ <Link to="/admin" className="text-blue-400">Nodes Admin</Link></p>
+
+                  <div className="border-t border-white/8 pt-4 mt-2 space-y-3">
+                    <div>
+                      <h3 className="text-white font-bold text-xs mb-0.5">ไอคอน ISO บนแผนที่ (หมวดหลัก)</h3>
+                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                        อัพโหลด PNG/WebP พื้นหลังโปร่งใส แนะนำ ~128×160px — แทนที่ SVG เดิมของแต่ละหมวด
+                        (ว่างไว้ = ใช้ SVG เดิม)
+                      </p>
+                    </div>
+                    <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                      {CATEGORIES.map(c => {
+                        const cfg = CAT_CONFIG[c]
+                        return (
+                          <div key={c} className="flex gap-2 items-start rounded-xl bg-white/[0.03] border border-white/8 p-2">
+                            <div className="flex flex-col items-center gap-1 flex-shrink-0 w-12 pt-1">
+                              <IsoPin
+                                category={c}
+                                isoOverrideUrl={isoPinIcons[c]?.trim() || undefined}
+                                scale={0.38}
+                              />
+                              <span className="text-[9px] text-gray-600 text-center leading-tight">{cfg.label.th}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <ImageUploader
+                                value={isoPinIcons[c] ?? ''}
+                                onChange={url => setIsoPinIcons(prev => ({ ...prev, [c]: url }))}
+                                nodeId={nodeId}
+                                label=""
+                                thumbnail
+                                placeholder={`URL รูป ${cfg.label.th}`}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   <button onClick={saveNodeSettings}
                     className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors">
                     💾 บันทึก Settings

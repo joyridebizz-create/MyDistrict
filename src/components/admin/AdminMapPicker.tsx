@@ -3,8 +3,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { parseGMapsURL } from '../../lib/parseGMapsURL'
 import { IsoPin } from '../IsoPin'
-import type { Place, Node, CustomCategory } from '../../types/place'
-import { getCatConfig } from '../../types/place'
+import type { Place, Node, CustomCategory, Category } from '../../types/place'
+import { CATEGORIES, getCatConfig } from '../../types/place'
 
 const TILE_URLS = {
   Retro: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -187,7 +187,18 @@ export function AdminMapPicker({
               }}
               onClick={() => onSelectPlace(place)}
             >
-              <IsoPin category={place.category} catConfig={cat} featured={place.is_featured} scale={pos.scale} selected={isSel} />
+              <IsoPin
+                category={place.category}
+                catConfig={cat}
+                isoOverrideUrl={
+                  CATEGORIES.includes(place.category as Category)
+                    ? node.iso_pin_icons?.[place.category as Category]?.trim() || undefined
+                    : undefined
+                }
+                featured={place.is_featured}
+                scale={pos.scale}
+                selected={isSel}
+              />
               <div style={{ marginTop: 2, textAlign: 'center', pointerEvents: 'none' }}>
                 <span style={{
                   display: 'inline-block',

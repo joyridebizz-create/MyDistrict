@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { IsoPin } from '../IsoPin'
-import type { Place, CustomCategory, SubCategory } from '../../types/place'
+import type { Place, CustomCategory, SubCategory, Category } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig } from '../../types/place'
 import { ImageUploader } from './ImageUploader'
 
@@ -44,6 +44,8 @@ interface PlaceFormProps {
   nodeId?:            string
   customCategories?:  CustomCategory[]
   subcategories?:     SubCategory[]
+  /** ไอคอน ISO แบบกำหนดเองต่อหมวดหลัก (จาก nodes.iso_pin_icons) */
+  isoPinIcons?:       Partial<Record<Category, string>> | null
   onSave:             (data: PlaceFormData) => void
   onDelete?:          () => void
   onClose:            () => void
@@ -63,7 +65,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export function PlaceForm({ initial, draftLat, draftLng, saving, nodeId = 'default', customCategories = [], subcategories = [], onSave, onDelete, onClose }: PlaceFormProps) {
+export function PlaceForm({
+  initial, draftLat, draftLng, saving, nodeId = 'default',
+  customCategories = [], subcategories = [], isoPinIcons = null,
+  onSave, onDelete, onClose,
+}: PlaceFormProps) {
   const isEdit = !!initial
   const [tab, setTab] = useState<TabKey>('th')
   const [data, setData] = useState<PlaceFormData>(() => {
@@ -179,7 +185,16 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, nodeId = 'defau
       {/* ── Header ── */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <IsoPin category={data.category} scale={0.45} />
+          <IsoPin
+            category={data.category}
+            catConfig={cat}
+            isoOverrideUrl={
+              CATEGORIES.includes(data.category as Category)
+                ? isoPinIcons?.[data.category as Category]?.trim() || undefined
+                : undefined
+            }
+            scale={0.45}
+          />
           <div className="min-w-0">
             <div className="text-white font-bold text-sm truncate">
               {isEdit ? 'แก้ไขสถานที่' : 'เพิ่มสถานที่ใหม่'}
@@ -205,7 +220,7 @@ export function PlaceForm({ initial, draftLat, draftLng, saving, nodeId = 'defau
                   background:  isA ? `${cfg.color}22` : 'rgba(255,255,255,0.04)',
                   borderColor: isA ? `${cfg.color}66` : 'rgba(255,255,255,0.08)',
                 }}>
-                <IsoPin category={c} scale={0.35} />
+                <IsoPin category={c} isoOverrideUrl={isoPinIcons?.[c]?.trim() || undefined} scale={0.35} />
                 <span className="text-xs font-semibold" style={{ color: isA ? cfg.color : '#666' }}>
                   {cfg.label.th}
                 </span>
