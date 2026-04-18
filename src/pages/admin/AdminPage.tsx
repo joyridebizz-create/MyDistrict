@@ -258,18 +258,37 @@ function SidebarAdsAdminSection({
       {showAdForm && (
         <div className="border-t border-white/5 pt-4 space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1">ประเภท</label>
-            <select
-              className={INPUT}
-              value={adForm.kind}
-              onChange={e =>
-                setAdForm(f => ({ ...f, kind: e.target.value as SidebarAdKind, media_url: '' }))
-              }
-            >
-              <option value="text">ข้อความอย่างเดียว</option>
-              <option value="image">รูปภาพ</option>
-              <option value="video">วิดีโอสั้น</option>
-            </select>
+            <label className="block text-xs font-semibold text-gray-400 mb-2">ประเภท</label>
+            <div className="flex rounded-xl border border-white/10 p-0.5 gap-0.5 bg-black/25">
+              {([
+                ['text', 'ข้อความ', '📝'] as const,
+                ['image', 'รูปภาพ', '🖼️'] as const,
+                ['video', 'วิดีโอ', '🎬'] as const,
+              ]).map(([k, label, icon]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() =>
+                    setAdForm(f => ({
+                      ...f,
+                      kind: k,
+                      media_url: f.kind === k ? f.media_url : '',
+                    }))
+                  }
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-0.5 py-2 px-1 rounded-lg text-[11px] font-semibold transition-colors min-h-[44px] ${
+                    adForm.kind === k
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-sm leading-none">{icon}</span>
+                  <span className="leading-tight text-center">{label}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-600 mt-1.5">
+              เลือก <span className="text-gray-400">รูปภาพ</span> หรือ <span className="text-gray-400">วิดีโอ</span> แล้วอัพโหลด / วาง URL
+            </p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1">หัวข้อ (ไม่บังคับ)</label>
