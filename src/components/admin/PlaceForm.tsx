@@ -193,6 +193,7 @@ export function PlaceForm({
                 ? isoPinIcons?.[data.category as Category]?.trim() || undefined
                 : undefined
             }
+            knockoutWhiteBg={false}
             scale={0.45}
           />
           <div className="min-w-0">
@@ -220,7 +221,7 @@ export function PlaceForm({
                   background:  isA ? `${cfg.color}22` : 'rgba(255,255,255,0.04)',
                   borderColor: isA ? `${cfg.color}66` : 'rgba(255,255,255,0.08)',
                 }}>
-                <IsoPin category={c} isoOverrideUrl={isoPinIcons?.[c]?.trim() || undefined} scale={0.35} />
+                <IsoPin category={c} isoOverrideUrl={isoPinIcons?.[c]?.trim() || undefined} knockoutWhiteBg={false} scale={0.35} />
                 <span className="text-xs font-semibold" style={{ color: isA ? cfg.color : '#666' }}>
                   {cfg.label.th}
                 </span>
@@ -237,7 +238,12 @@ export function PlaceForm({
                   background:  isA ? `${c.color}22` : 'rgba(255,255,255,0.04)',
                   borderColor: isA ? `${c.color}66` : 'rgba(255,255,255,0.08)',
                 }}>
-                <IsoPin category={c.id} catConfig={{ icon: c.icon, color: c.color, label: { th: c.label_th, en: c.label_en ?? c.label_th, zh: c.label_zh ?? c.label_th } }} scale={0.35} />
+                <IsoPin
+                  category={c.id}
+                  catConfig={{ icon: c.icon, color: c.color, icon_url: c.icon_url ?? null, label: { th: c.label_th, en: c.label_en ?? c.label_th, zh: c.label_zh ?? c.label_th } }}
+                  knockoutWhiteBg={false}
+                  scale={0.35}
+                />
                 <span className="text-xs font-semibold truncate w-full text-center px-0.5" style={{ color: isA ? c.color : '#666' }}>
                   {c.label_th}
                 </span>

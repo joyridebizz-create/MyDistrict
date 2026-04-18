@@ -1048,8 +1048,9 @@ export function AdminPage() {
                     <div>
                       <h3 className="text-white font-bold text-xs mb-0.5">ไอคอน ISO บนแผนที่ (หมวดหลัก)</h3>
                       <p className="text-[10px] text-gray-500 leading-relaxed">
-                        อัพโหลด PNG/WebP พื้นหลังโปร่งใส แนะนำ ~128×160px — แทนที่ SVG เดิมของแต่ละหมวด
-                        (ว่างไว้ = ใช้ SVG เดิม)
+                        แนะนำ <span className="text-gray-400">PNG/WebP พื้นหลังโปร่งใส</span> (~128×160px) — ถ้าไฟล์มีกรอบขาว
+                        ระบบจะช่วยกลืนพื้นกับแผนที่บางส่วน แต่ผลที่ดีที่สุดคือ export ให้โปร่งใสจริงๆ (Photoshop / Photopea / remove.bg)
+                        · ว่างไว้ = ใช้ SVG เดิม
                       </p>
                     </div>
                     <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
@@ -1061,6 +1062,7 @@ export function AdminPage() {
                               <IsoPin
                                 category={c}
                                 isoOverrideUrl={isoPinIcons[c]?.trim() || undefined}
+                                knockoutWhiteBg={false}
                                 scale={0.38}
                               />
                               <span className="text-[9px] text-gray-600 text-center leading-tight">{cfg.label.th}</span>

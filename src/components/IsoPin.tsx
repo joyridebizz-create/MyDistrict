@@ -5,6 +5,8 @@ interface IsoPinProps {
   catConfig?: CatConfig        // config ของ custom category (ถ้ามี)
   /** แทนที่ SVG หมวดหลักด้วยรูป (จาก nodes.iso_pin_icons) */
   isoOverrideUrl?: string | null
+  /** ลดพื้นขาวด้วย mix-blend (ใช้บนแผนที่ — ใน UI มืดให้ส่ง false) */
+  knockoutWhiteBg?: boolean
   featured?:  boolean
   selected?:  boolean
   scale?:     number
@@ -209,7 +211,7 @@ function EmojiPin({ icon, color }: { icon: string; color: string }) {
 }
 
 /** แสดงภาพ custom building ที่ admin อัพโหลด — เต็มพื้นที่ pin */
-function CustomImagePin({ url, color }: { url: string; color: string }) {
+function CustomImagePin({ url, color, knockoutWhiteBg }: { url: string; color: string; knockoutWhiteBg: boolean }) {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       {/* shadow ellipse */}
@@ -222,7 +224,7 @@ function CustomImagePin({ url, color }: { url: string; color: string }) {
         background: 'rgba(0,0,0,0.18)',
         filter: 'blur(2px)',
       }} />
-      {/* building image */}
+      {/* building image — multiply ลดพื้นขาวบนแผนที่สีอ่อน (วิธีที่สมบูรณ์ = ใช้ PNG/WebP โปร่งใส) */}
       <img
         src={url}
         alt=""
@@ -233,7 +235,8 @@ function CustomImagePin({ url, color }: { url: string; color: string }) {
           width: '100%',
           height: '92%',
           objectFit: 'contain',
-          filter: `drop-shadow(0 3px 6px rgba(0,0,0,0.4))`,
+          ...(knockoutWhiteBg ? { mixBlendMode: 'multiply' as const } : {}),
+          filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
         }}
         onError={e => {
           // fallback: ซ่อนรูปถ้าโหลดไม่ได้
@@ -258,6 +261,7 @@ export function IsoPin({
   category,
   catConfig,
   isoOverrideUrl,
+  knockoutWhiteBg = true,
   featured = false,
   selected = false,
   scale = 1,
@@ -270,11 +274,11 @@ export function IsoPin({
 
   let pinBody: JSX.Element
   if (override) {
-    pinBody = <CustomImagePin url={override} color={color} />
+    pinBody = <CustomImagePin url={override} color={color} knockoutWhiteBg={knockoutWhiteBg} />
   } else if (SvgComponent) {
     pinBody = <SvgComponent />
   } else if (catConfig?.icon_url) {
-    pinBody = <CustomImagePin url={catConfig.icon_url} color={color} />
+    pinBody = <CustomImagePin url={catConfig.icon_url} color={color} knockoutWhiteBg={knockoutWhiteBg} />
   } else {
     pinBody = (
       <EmojiPin
