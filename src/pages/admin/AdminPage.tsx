@@ -12,7 +12,7 @@ import { AdminMapPicker }   from '../../components/admin/AdminMapPicker'
 import { PlaceForm }        from '../../components/admin/PlaceForm'
 import { ImageUploader }    from '../../components/admin/ImageUploader'
 import type { PlaceFormData } from '../../components/admin/PlaceForm'
-import type { Place, Category } from '../../types/place'
+import type { Place } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig, ICON_OPTIONS, COLOR_OPTIONS } from '../../types/place'
 import type { CustomCategory } from '../../types/place'
 import type { SidebarAd, SidebarAdKind } from '../../types/sidebarAd'
@@ -494,7 +494,7 @@ export function AdminPage() {
     province:     activeNode.province ?? '',
     default_zoom: activeNode.default_zoom,
   })
-  const [isoPinIcons, setIsoPinIcons] = useState<Partial<Record<Category, string>>>({})
+  const [isoPinIcons, setIsoPinIcons] = useState<Partial<Record<string, string>>>({})
 
   useEffect(() => {
     setIsoPinIcons({})
@@ -509,7 +509,7 @@ export function AdminPage() {
     })
     const icons = node.iso_pin_icons
     if (icons && typeof icons === 'object' && !Array.isArray(icons)) {
-      setIsoPinIcons({ ...(icons as Partial<Record<Category, string>>) })
+      setIsoPinIcons({ ...(icons as Partial<Record<string, string>>) })
     } else {
       setIsoPinIcons({})
     }
@@ -547,6 +547,12 @@ export function AdminPage() {
     }
     return list
   }, [places, filterCat, search])
+
+  /** หมวดหลักทั้งหมดสำหรับไอคอน ISO: 5 built-in + หมวด custom (ที่ active ใน DB) */
+  const isoPinCategoryIds = useMemo(
+    () => [...CATEGORIES, ...customCategories.map(c => c.id)],
+    [customCategories]
+  )
 
   /* ── CRUD helpers ── */
   async function handleSave(data: PlaceFormData) {
@@ -609,13 +615,13 @@ export function AdminPage() {
   }
 
   async function saveNodeSettings() {
-    const prev = (node?.iso_pin_icons ?? {}) as Partial<Record<Category, string>>
-    const cleaned: Partial<Record<Category, string>> = {}
-    for (const c of CATEGORIES) {
+    const prev = (node?.iso_pin_icons ?? {}) as Partial<Record<string, string>>
+    const cleaned: Partial<Record<string, string>> = {}
+    for (const c of isoPinCategoryIds) {
       const v = isoPinIcons[c]?.trim()
       if (v) cleaned[c] = v
     }
-    for (const c of CATEGORIES) {
+    for (const c of new Set([...Object.keys(prev), ...isoPinCategoryIds])) {
       const oldU = prev[c]?.trim()
       const newU = cleaned[c]?.trim()
       if (oldU && oldU !== newU) {
@@ -1054,14 +1060,15 @@ export function AdminPage() {
                       </p>
                     </div>
                     <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-                      {CATEGORIES.map(c => {
-                        const cfg = CAT_CONFIG[c]
+                      {isoPinCategoryIds.map(catKey => {
+                        const cfg = getCatConfig(catKey, customCategories)
                         return (
-                          <div key={c} className="flex gap-2 items-start rounded-xl bg-white/[0.03] border border-white/8 p-2">
+                          <div key={catKey} className="flex gap-2 items-start rounded-xl bg-white/[0.03] border border-white/8 p-2">
                             <div className="flex flex-col items-center gap-1 flex-shrink-0 w-12 pt-1">
                               <IsoPin
-                                category={c}
-                                isoOverrideUrl={isoPinIcons[c]?.trim() || undefined}
+                                category={catKey}
+                                catConfig={cfg}
+                                isoOverrideUrl={isoPinIcons[catKey]?.trim() || undefined}
                                 knockoutWhiteBg={false}
                                 scale={0.38}
                               />
@@ -1069,8 +1076,8 @@ export function AdminPage() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <ImageUploader
-                                value={isoPinIcons[c] ?? ''}
-                                onChange={url => setIsoPinIcons(prev => ({ ...prev, [c]: url }))}
+                                value={isoPinIcons[catKey] ?? ''}
+                                onChange={url => setIsoPinIcons(prev => ({ ...prev, [catKey]: url }))}
                                 nodeId={nodeId}
                                 label=""
                                 thumbnail

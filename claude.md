@@ -218,6 +218,26 @@ src/
 [x] ปิด spiderfy: คลิกแผนที่ (Leaflet), zoomstart, หรือเมื่อ places เปลี่ยน
 ```
 
+### 🖼️ Sidebar โฆษณา (สไลด์)
+```
+[x] SidebarAdSlider: flex track ใช้ items-start / self-start — แก้พื้นดำใต้รูปจาก align-items: stretch
+[x] สไลด์รูป/วิดีโอ: กรอบ aspect-[4/3] + รูป object-contain (QR/โลโก้ไม่ถูกยืดผิดสัดส่วน); วิดีโอ object-cover
+```
+
+### 🧷 ไอคอน ISO ครบทุกหมวดหลัก (built-in + custom)
+```
+[x] Node.iso_pin_icons: Partial<Record<string, string>> — key = id หมวด built-in หรือ custom
+[x] Admin Settings: รายการช่องอัปโหลด ISO = CATEGORIES + customCategories (active) — ไม่จำกัดแค่ 5 หมวด
+[x] saveNodeSettings: บันทึก + ล้างไฟล์ Storage เก่าสำหรับทุก key ที่จัดการ
+[x] DistrictMap / AdminMapPicker / PlaceForm: isoOverrideUrl จาก node.iso_pin_icons[place.category] ทุกหมวด
+```
+
+### 🏠 หน้าแรก (Landing)
+```
+[x] HomePage / NodeCard: จุดสีบนแผนที่ย่อใช้ getCatConfig(p.category, []) แทน CAT_CONFIG[...] อย่างเดียว
+    → กันหน้าขาว (crash) เมื่อมีสถานที่หมวด custom
+```
+
 ---
 
 ## ✅ สิ่งที่ทำเสร็จแล้ว — Session วันที่ 17 เม.ย. 2026
@@ -292,7 +312,14 @@ src/
 ```
 package.json              ← dependencies: supercluster; devDependencies: @types/supercluster
 package-lock.json         ← lock ตามด้านบน
-src/components/DistrictMap.tsx ← clustering + ฟองคลัสเตอร์ + spiderfy overlay (IsoPin เดิม)
+
+src/components/DistrictMap.tsx      ← clustering + spiderfy; iso_pin lookup ทุกหมวด (string key)
+src/components/admin/AdminMapPicker.tsx ← iso_pin ทุกหมวด
+src/components/admin/PlaceForm.tsx  ← isoPinIcons Record<string>; หัวฟอร์ม + ปุ่มหมวด custom ใช้ ISO override
+src/components/SidebarAdSlider.tsx  ← items-start + aspect สไลด์โฆษณา (รูป contain / วิดีโอ cover)
+src/pages/admin/AdminPage.tsx       ← isoPinCategoryIds; บันทึก iso_pin_icons ครบหมวด + cleanup Storage
+src/pages/HomePage.tsx              ← NodeCard จุดสี: getCatConfig (กันครashes หมวด custom)
+src/types/place.ts                  ← Node.iso_pin_icons → Record<string, string>
 ```
 
 ---
@@ -362,10 +389,11 @@ getClusters([west,south,east,north], Math.floor(mapZoom))
 scale = Math.pow(2, zoom - 15) * 0.85
 visible = zoom >= 12   // เฉพาะหมุดเดี่ยวจาก getClusters; ฟองคลัสเตอร์ไม่ใช้กฎนี้
 
-// IsoPin accepts string category:
-// - built-in ('tour','stay','food','cafe','car') → SVG building
-// - custom → EmojiPin (pin shape + emoji icon)
-// - catConfig prop ส่ง color+icon ให้ EmojiPin
+// nodes.iso_pin_icons: { [categoryId: string]: imageUrl } — ทั้ง 5 หมวด built-in และ id หมวด custom
+// IsoPin: isoOverrideUrl ชนะก่อน → แล้ว SVG built-in → icon_url หมวด custom → EmojiPin
+
+// HomePage NodeCard mini-map dots: getCatConfig(p.category, []) — ยังไม่โหลด customCategories ต่อ node
+// (สีหมวด custom อาจเป็น fallback จนกว่าจะดึง categories จริง — optional TODO)
 ```
 
 ### getCatConfig()
@@ -444,8 +472,10 @@ AI Auto-translate (MyMemory API):
 
 ### Priority กลาง
 ```
+[ ] HomePage: โหลดสีหมวด custom จริงบนการ์ด node (ใช้ getCatConfig + categories ต่อ node) แทน fallback อย่างเดียว
 [ ] แผนที่: จูนค่า clustering (radius, maxZoom, MIN_PIN_ZOOM) ตามการใช้งานจริง
 [ ] แผนที่: ถ้าคลัสเตอร์เดียวมีมากกว่า LEAF_LIMIT (500) — เพิ่ม limit หรือแสดงข้อความ/แบ่งหน้า
+[ ] Duplicate / clone node: คัดลอก places+categories+… จาก node ต้นแบบ (เช่น phimai) — ยังทำมือใน DB
 
 [ ] Rating system จริง
     - ตาราง place_reviews (user_id, place_id, rating, comment)
@@ -511,6 +541,8 @@ AI Auto-translate (MyMemory API):
 
 ⚠️  korat/ayutthaya nodes ยังไม่มีข้อมูล
     → แสดง "ยังไม่มีสถานที่"
+
+⚠️  สร้าง node ใหม่ = โครงเดียวกับ phimai ใน DB แต่ไม่ copy สถานที่/หมวด/โฆษณา — ต้องตั้งใน admin เองหรือ migrate
 ```
 
 ---

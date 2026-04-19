@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNodes } from '../hooks/useNodes'
 import { usePlaces } from '../hooks/usePlaces'
-import type { Node, Category } from '../types/place'
-import { CAT_CONFIG, CATEGORIES } from '../types/place'
+import type { Node } from '../types/place'
+import { CAT_CONFIG, CATEGORIES, getCatConfig } from '../types/place'
 
 /* ── Node card — loads its own place counts ── */
 function NodeCard({ node }: { node: Node }) {
@@ -43,7 +43,7 @@ function NodeCard({ node }: { node: Node }) {
             const angle = (i / 8) * Math.PI * 2
             const cx = 100 + Math.cos(angle) * 35
             const cy = 60 + Math.sin(angle) * 25
-            const cat = CAT_CONFIG[p.category as Category]
+            const cat = getCatConfig(p.category, [])
             return <circle key={p.id} cx={cx} cy={cy} r="4" fill={cat.color} opacity="0.85" />
           })}
         </svg>

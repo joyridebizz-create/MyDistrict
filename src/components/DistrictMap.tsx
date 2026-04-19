@@ -3,8 +3,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Supercluster from 'supercluster'
 import { IsoPin } from './IsoPin'
-import type { Place, Node, Lang, CustomCategory, Category } from '../types/place'
-import { CATEGORIES, getCatConfig } from '../types/place'
+import type { Place, Node, Lang, CustomCategory } from '../types/place'
+import { getCatConfig } from '../types/place'
 
 /** แสดงหมุดเดี่ยวเมื่อ zoom ≥ นี้; ต่ำกว่านี้ยังเห็นเฉพาะฟองคลัสเตอร์ (และ spiderfy) */
 const MIN_PIN_ZOOM = 12
@@ -320,11 +320,7 @@ export function DistrictMap({ node, places, lang = 'th', customCategories = [], 
               <IsoPin
                 category={place.category}
                 catConfig={cat}
-                isoOverrideUrl={
-                  CATEGORIES.includes(place.category as Category)
-                    ? node.iso_pin_icons?.[place.category as Category]?.trim() || undefined
-                    : undefined
-                }
+                isoOverrideUrl={node.iso_pin_icons?.[place.category]?.trim() || undefined}
                 featured={place.is_featured}
                 scale={pos.scale}
                 selected={isSelected}

@@ -86,14 +86,14 @@ export function SidebarAdSlider({ ads }: SidebarAdSliderProps) {
       >
         {/* track: ความกว้างรวม = n × ความกว้าง viewport */}
         <div
-          className={`flex ${isDragging ? '' : 'transition-transform duration-300 ease-out'}`}
+          className={`flex items-start ${isDragging ? '' : 'transition-transform duration-300 ease-out'}`}
           style={{
             width: `${n * 100}%`,
             transform: `translateX(calc(-${(safeIndex * 100) / n}% + ${dragOffset}px))`,
           }}
         >
           {ads.map(ad => (
-            <div key={ad.id} className="flex-shrink-0" style={{ width: `${100 / n}%` }}>
+            <div key={ad.id} className="flex-shrink-0 self-start" style={{ width: `${100 / n}%` }}>
               <AdSlide ad={ad} />
             </div>
           ))}
@@ -172,11 +172,11 @@ function AdSlide({ ad }: { ad: SidebarAd }) {
 
   if (ad.kind === 'image' && ad.media_url) {
     return (
-      <div className="relative h-[88px] bg-black/30">
+      <div className="relative w-full aspect-[4/3] bg-[#0a0a0c]">
         <img
           src={ad.media_url}
           alt={ad.title ?? ''}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-contain object-center"
           draggable={false}
         />
         {ad.title && (
@@ -190,10 +190,10 @@ function AdSlide({ ad }: { ad: SidebarAd }) {
 
   if (ad.kind === 'video' && ad.media_url) {
     return (
-      <div className="relative h-[88px] bg-black">
+      <div className="relative w-full aspect-[4/3] bg-black overflow-hidden">
         <video
           src={ad.media_url}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
           muted
           playsInline
           loop
@@ -210,7 +210,7 @@ function AdSlide({ ad }: { ad: SidebarAd }) {
   }
 
   return (
-    <div className="h-[88px] flex items-center justify-center text-[10px] text-gray-600 px-2 text-center">
+    <div className="aspect-[4/3] min-h-[72px] flex items-center justify-center text-[10px] text-gray-600 px-2 text-center bg-black/20">
       ไม่มีสื่อ — แก้ไขใน Admin
     </div>
   )

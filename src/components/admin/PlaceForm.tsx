@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { IsoPin } from '../IsoPin'
-import type { Place, CustomCategory, SubCategory, Category } from '../../types/place'
+import type { Place, CustomCategory, SubCategory } from '../../types/place'
 import { CAT_CONFIG, CATEGORIES, getCatConfig } from '../../types/place'
 import { ImageUploader } from './ImageUploader'
 
@@ -45,7 +45,7 @@ interface PlaceFormProps {
   customCategories?:  CustomCategory[]
   subcategories?:     SubCategory[]
   /** ไอคอน ISO แบบกำหนดเองต่อหมวดหลัก (จาก nodes.iso_pin_icons) */
-  isoPinIcons?:       Partial<Record<Category, string>> | null
+  isoPinIcons?:       Partial<Record<string, string>> | null
   onSave:             (data: PlaceFormData) => void
   onDelete?:          () => void
   onClose:            () => void
@@ -188,11 +188,7 @@ export function PlaceForm({
           <IsoPin
             category={data.category}
             catConfig={cat}
-            isoOverrideUrl={
-              CATEGORIES.includes(data.category as Category)
-                ? isoPinIcons?.[data.category as Category]?.trim() || undefined
-                : undefined
-            }
+            isoOverrideUrl={isoPinIcons?.[data.category]?.trim() || undefined}
             knockoutWhiteBg={false}
             scale={0.45}
           />
@@ -241,6 +237,7 @@ export function PlaceForm({
                 <IsoPin
                   category={c.id}
                   catConfig={{ icon: c.icon, color: c.color, icon_url: c.icon_url ?? null, label: { th: c.label_th, en: c.label_en ?? c.label_th, zh: c.label_zh ?? c.label_th } }}
+                  isoOverrideUrl={isoPinIcons?.[c.id]?.trim() || undefined}
                   knockoutWhiteBg={false}
                   scale={0.35}
                 />

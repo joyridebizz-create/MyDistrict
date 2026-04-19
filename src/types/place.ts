@@ -9,8 +9,8 @@ export interface Node {
   default_zoom: number
   is_active: boolean
   created_at: string
-  /** แทนที่ SVG หมดหมู่หลักด้วยรูป (URL ใน Storage) — key = tour|stay|food|cafe|car */
-  iso_pin_icons?: Partial<Record<Category, string>> | null
+  /** แทนที่ SVG/emoji ของหมวดด้วยรูป ISO (URL ใน Storage) — key = id หมวด built-in หรือ custom */
+  iso_pin_icons?: Partial<Record<string, string>> | null
 }
 
 export interface Place {
